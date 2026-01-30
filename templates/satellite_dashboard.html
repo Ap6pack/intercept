@@ -68,7 +68,6 @@
                 <span id="trackingStatus">TRACKING</span>
             </div>
             <div class="datetime" id="utcTime">--:--:-- UTC</div>
-            <a href="/" class="back-link">Main Dashboard</a>
         </div>
     </header>
 
@@ -304,10 +303,6 @@
 
         function setupEmbeddedMode() {
             if (isEmbedded) {
-                // Hide back link when embedded
-                const backLink = document.querySelector('.back-link');
-                if (backLink) backLink.style.display = 'none';
-
                 // Add embedded class to body for CSS adjustments
                 document.body.classList.add('embedded');
 

@@ -1500,7 +1500,7 @@
                 </div>
 
                 <!-- TSCM Dashboard -->
-                <div id="tscmVisuals" class="tscm-dashboard" style="display: none; padding: 16px;">
+                <div id="tscmVisuals" class="tscm-dashboard" style="display: none;">
                     <!-- TSCM Function Bar -->
                     <div class="function-strip tscm-strip" id="tscmStrip" style="margin-bottom: 12px;">
                         <div class="function-strip-inner">
@@ -3017,8 +3017,8 @@
                 restoreSectionsToMode('rtlamrMode', ['#rtlamrPpm', '#rtlamrUnique', '#rtlamrLogging'], 'Utility Meter');
                 restoreSectionsToMode('aprsMode', [], 'APRS Tracking');
                 restoreSectionsToMode('spystationsMode', ['#filterTypeNumber', '#countryFilters', '#modeFilters', '#spyStatsNumber'], 'Spy Stations');
-                restoreSectionsToMode('wifiMode', ['#wifiScanModeQuick', '#monitorStartBtn', '#wifiChannel', '#watchMacInput', '#targetBssid'], 'WiFi Scanning');
-                restoreSectionsToMode('bluetoothMode', ['#btAdapterSelect', '#btTransport', '#btScanDuration'], 'Bluetooth Scanning');
+                restoreSectionsToMode('wifiMode', ['#wifiScanModeQuick', '#monitorStartBtn', '#wifiChannel', '#watchMacInput', '#targetBssid', '#wifiExportCsvBtn'], 'WiFi Scanning');
+                restoreSectionsToMode('bluetoothMode', ['#btAdapterSelect', '#btTransport', '#btScanDuration', '#btExportCsvBtn', '#btCapabilityMarker'], 'Bluetooth Scanning');
                 restoreSectionsToMode('tscmMode', ['#tscmWifiEnabled', '#tscmVerboseResults', '#tscmBaselineName'], 'TSCM Sweep');
                 restoreSectionsToMode('satelliteMode', ['#satTrackingList', '#obsLat', '#obsLon'], 'Satellite Command');
                 restoreSectionsToMode('sstvMode', ['#sstvFrequency'], 'ISS SSTV Decoder');

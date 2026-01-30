@@ -17,6 +17,10 @@
     --bg-elevated: #1a202c;
     --bg-overlay: rgba(0, 0, 0, 0.7);
 
+    /* Background aliases for components */
+    --bg-dark: var(--bg-primary);
+    --bg-panel: var(--bg-secondary);
+
     /* Accent colors */
     --accent-cyan: #4a9eff;
     --accent-cyan-dim: rgba(74, 158, 255, 0.15);
@@ -149,6 +153,10 @@
     --bg-card: #ffffff;
     --bg-elevated: #f8fafc;
     --bg-overlay: rgba(255, 255, 255, 0.9);
+
+    /* Background aliases for components */
+    --bg-dark: var(--bg-primary);
+    --bg-panel: var(--bg-secondary);
 
     --accent-cyan: #2563eb;
     --accent-cyan-dim: rgba(37, 99, 235, 0.1);

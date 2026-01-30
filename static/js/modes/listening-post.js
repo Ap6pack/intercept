@@ -227,6 +227,9 @@ function startScanner() {
             isScannerPaused = false;
             scannerSignalActive = false;
 
+            // Update listening strip
+            updateListeningStripRunning(true);
+
             // Update controls (with null checks)
             const startBtn = document.getElementById('scannerStartBtn');
             if (startBtn) {
@@ -288,6 +291,9 @@ function stopScanner() {
             isScannerPaused = false;
             scannerSignalActive = false;
             currentSignalLevel = 0;
+
+            // Update listening strip
+            updateListeningStripRunning(false);
 
             // Re-enable listen button (will be in local mode after stop)
             updateListenButtonState(false);
@@ -572,6 +578,10 @@ function handleFrequencyUpdate(data) {
     const mainFreq = document.getElementById('mainScannerFreq');
     if (mainFreq) mainFreq.textContent = freqStr;
 
+    // Update function strip frequency
+    const stripFreq = document.getElementById('listeningStripFreq');
+    if (stripFreq) stripFreq.textContent = freqStr;
+
     // Update progress bar
     const progress = ((data.frequency - scannerStartFreq) / (scannerEndFreq - scannerStartFreq)) * 100;
     const progressBar = document.getElementById('scannerProgressBar');
@@ -621,6 +631,10 @@ function handleSignalFound(data) {
     if (signalCount) signalCount.textContent = scannerSignalCount;
     const mainSignalCount = document.getElementById('mainSignalCount');
     if (mainSignalCount) mainSignalCount.textContent = scannerSignalCount;
+
+    // Update function strip signal count
+    const stripSignals = document.getElementById('listeningStripSignals');
+    if (stripSignals) stripSignals.textContent = scannerSignalCount;
 
     // Update sidebar
     updateScannerDisplay('SIGNAL FOUND', 'var(--accent-green)');
@@ -2596,4 +2610,82 @@ window.removeBookmark = removeBookmark;
 window.tuneToFrequency = tuneToFrequency;
 window.clearScannerLog = clearScannerLog;
 window.exportScannerLog = exportScannerLog;
+
+// ============== FUNCTION STRIP SUPPORT ==============
+
+/**
+ * Update the listening post function strip running state
+ */
+function updateListeningStripRunning(running) {
+    const listeningStripDot = document.getElementById('listeningStripDot');
+    const listeningStripStatus = document.getElementById('listeningStripStatus');
+    const listeningStripStartBtn = document.getElementById('listeningStripStartBtn');
+    const listeningStripStopBtn = document.getElementById('listeningStripStopBtn');
+    const listeningStripFreqInput = document.getElementById('listeningStripFreqInput');
+    const listeningStripMode = document.getElementById('listeningStripMode');
+    const listeningStripGain = document.getElementById('listeningStripGain');
+
+    if (listeningStripDot) listeningStripDot.className = 'status-dot ' + (running ? 'scanning' : 'inactive');
+    if (listeningStripStatus) {
+        listeningStripStatus.textContent = running ? 'SCANNING' : 'STANDBY';
+        listeningStripStatus.style.color = running ? 'var(--accent-cyan)' : '';
+    }
+    if (listeningStripStartBtn) listeningStripStartBtn.style.display = running ? 'none' : 'inline-block';
+    if (listeningStripStopBtn) listeningStripStopBtn.style.display = running ? 'inline-block' : 'none';
+    if (listeningStripFreqInput) listeningStripFreqInput.disabled = running;
+    if (listeningStripMode) listeningStripMode.disabled = running;
+    if (listeningStripGain) listeningStripGain.disabled = running;
+}
+
+/**
+ * Update listening strip stats
+ */
+function updateListeningStrip(freq, bandwidth, signalCount) {
+    const freqEl = document.getElementById('listeningStripFreq');
+    const bwEl = document.getElementById('listeningStripBW');
+    const signalsEl = document.getElementById('listeningStripSignals');
+
+    if (freqEl && freq !== undefined) freqEl.textContent = freq;
+    if (bwEl && bandwidth !== undefined) bwEl.textContent = bandwidth;
+    if (signalsEl && signalCount !== undefined) signalsEl.textContent = signalCount;
+}
+
+/**
+ * Start listening from the function strip
+ */
+function startListeningFromStrip() {
+    // Get values from strip
+    const freq = document.getElementById('listeningStripFreqInput')?.value;
+    const mode = document.getElementById('listeningStripMode')?.value;
+    const gain = document.getElementById('listeningStripGain')?.value;
+
+    // Update the main controls if they exist
+    if (freq) {
+        const mainFreqInput = document.getElementById('radioScanStart');
+        if (mainFreqInput) mainFreqInput.value = freq;
+    }
+    if (mode) {
+        currentModulation = mode.toLowerCase();
+    }
+    if (gain) {
+        const gainValueEl = document.getElementById('radioGainValue');
+        if (gainValueEl) gainValueEl.textContent = gain;
+    }
+
+    // Start the scanner
+    startScanner();
+}
+
+/**
+ * Stop listening from the function strip
+ */
+function stopListening() {
+    stopScanner();
+}
+
+// Export strip functions
+window.updateListeningStripRunning = updateListeningStripRunning;
+window.updateListeningStrip = updateListeningStrip;
+window.startListeningFromStrip = startListeningFromStrip;
+window.stopListening = stopListening;
 

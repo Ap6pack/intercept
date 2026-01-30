@@ -32,12 +32,17 @@
 .threat-card.low.active { background: rgba(0,255,136,0.2); }
 
 /* TSCM Dashboard */
+/* Ensure output-panel doesn't clip TSCM content */
+.output-panel:has(.tscm-dashboard) {
+    overflow: visible;
+}
+
 .tscm-dashboard {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    overflow-y: auto;
-    padding-bottom: 80px; /* Space for status bar */
+    overflow: visible;
+    padding: 20px 16px 80px 16px; /* Extra top padding for function strip visibility */
 }
 .tscm-threat-banner {
     display: flex;

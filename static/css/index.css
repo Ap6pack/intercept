@@ -1414,6 +1414,7 @@ header h1 .tagline {
     overflow: visible;
     padding: 12px;
     position: relative;
+    margin: 0; /* Reset any inherited margins - spacing handled by parent gap */
 }
 
 .section h3 {
@@ -1588,6 +1589,101 @@ header h1 .tagline {
     background: var(--bg-secondary);
     color: var(--accent-cyan);
     border-color: var(--accent-cyan);
+}
+
+/* WiFi Mode Tab Buttons */
+.wifi-mode-tab {
+    flex: 1;
+    padding: 8px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.wifi-mode-tab:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--accent-cyan);
+}
+
+.wifi-mode-tab.active {
+    background: var(--accent-green);
+    color: #000;
+    border-color: var(--accent-green);
+}
+
+.wifi-mode-tab.active:hover {
+    background: #1db954;
+    border-color: #1db954;
+}
+
+/* WiFi Start/Stop Buttons */
+.wifi-start-btn {
+    background: var(--accent-green) !important;
+    color: #000 !important;
+    border-color: var(--accent-green) !important;
+}
+
+.wifi-start-btn:hover {
+    background: #1db954 !important;
+    border-color: #1db954 !important;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.wifi-stop-btn {
+    background: var(--accent-red) !important;
+    color: #fff !important;
+    border-color: var(--accent-red) !important;
+}
+
+.wifi-stop-btn:hover {
+    background: #e62e50 !important;
+    border-color: #e62e50 !important;
+    box-shadow: 0 2px 8px rgba(255, 51, 102, 0.3);
+}
+
+/* WiFi Monitor Mode Buttons */
+.wifi-monitor-btn {
+    background: var(--accent-green) !important;
+    color: #000 !important;
+    border-color: var(--accent-green) !important;
+}
+
+.wifi-monitor-btn:hover {
+    background: #1db954 !important;
+    border-color: #1db954 !important;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.wifi-monitor-stop-btn {
+    background: var(--accent-orange) !important;
+    color: #000 !important;
+    border-color: var(--accent-orange) !important;
+}
+
+.wifi-monitor-stop-btn:hover {
+    background: #e68a00 !important;
+    border-color: #e68a00 !important;
+    box-shadow: 0 2px 8px rgba(255, 159, 28, 0.3);
+}
+
+/* WiFi Danger/Attack Buttons */
+.wifi-danger-btn {
+    border-color: var(--accent-red) !important;
+    color: var(--accent-red) !important;
+}
+
+.wifi-danger-btn:hover {
+    background: var(--accent-red) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(255, 51, 102, 0.3);
 }
 
 .run-btn {

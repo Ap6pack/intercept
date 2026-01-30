@@ -336,6 +336,9 @@ const WiFiMode = (function() {
         if (elements.scanModeDeep) {
             elements.scanModeDeep.addEventListener('click', () => setScanMode('deep'));
         }
+
+        // Initialize button visibility (default to quick mode)
+        setScanMode('quick');
     }
 
     function setScanMode(mode) {
@@ -349,6 +352,21 @@ const WiFiMode = (function() {
             elements.scanModeDeep.classList.toggle('active', mode === 'deep');
         }
 
+        // Update button visibility based on mode
+        if (!isScanning) {
+            if (elements.quickScanBtn) {
+                elements.quickScanBtn.style.display = mode === 'quick' ? 'inline-block' : 'none';
+                elements.quickScanBtn.textContent = 'Start Quick Scan';
+            }
+            if (elements.deepScanBtn) {
+                elements.deepScanBtn.style.display = mode === 'deep' ? 'inline-block' : 'none';
+                elements.deepScanBtn.textContent = 'Start Deep Scan';
+            }
+            if (elements.stopScanBtn) {
+                elements.stopScanBtn.style.display = 'none';
+            }
+        }
+
         console.log('[WiFiMode] Scan mode set to:', mode);
     }
 
@@ -357,7 +375,10 @@ const WiFiMode = (function() {
     // ==========================================================================
 
     async function startQuickScan() {
-        if (isScanning) return;
+        if (isScanning) {
+            showInfo('Scan already in progress');
+            return;
+        }
 
         // Check for agent mode conflicts
         if (!checkAgentConflicts()) {
@@ -365,6 +386,7 @@ const WiFiMode = (function() {
         }
 
         console.log('[WiFiMode] Starting quick scan...');
+        showInfo('Starting quick scan...');
         setScanning(true, 'quick');
 
         try {
@@ -436,6 +458,9 @@ const WiFiMode = (function() {
             // Process results
             processQuickScanResult({ ...scanResult, access_points: accessPoints });
 
+            // Show success notification
+            showInfo(`Found ${accessPoints.length} network${accessPoints.length !== 1 ? 's' : ''}`);
+
             // For quick scan, we're done after one scan
             // But keep polling if user wants continuous updates
             if (scanMode === 'quick') {
@@ -449,7 +474,10 @@ const WiFiMode = (function() {
     }
 
     async function startDeepScan() {
-        if (isScanning) return;
+        if (isScanning) {
+            showInfo('Scan already in progress');
+            return;
+        }
 
         // Check for agent mode conflicts
         if (!checkAgentConflicts()) {
@@ -457,6 +485,7 @@ const WiFiMode = (function() {
         }
 
         console.log('[WiFiMode] Starting deep scan...');
+        showInfo('Starting deep scan (requires monitor mode)...');
         setScanning(true, 'deep');
 
         try {
@@ -516,6 +545,7 @@ const WiFiMode = (function() {
 
     async function stopScan() {
         console.log('[WiFiMode] Stopping scan...');
+        showInfo('Stopping scan...');
 
         // Stop polling
         if (pollTimer) {
@@ -538,6 +568,7 @@ const WiFiMode = (function() {
             } else if (scanMode === 'deep') {
                 await fetch(`${CONFIG.apiBase}/scan/stop`, { method: 'POST' });
             }
+            showInfo('Scan stopped');
         } catch (error) {
             console.warn('[WiFiMode] Error stopping scan:', error);
         }
@@ -549,15 +580,21 @@ const WiFiMode = (function() {
         isScanning = scanning;
         if (mode) scanMode = mode;
 
-        // Update buttons
-        if (elements.quickScanBtn) {
-            elements.quickScanBtn.style.display = scanning ? 'none' : 'inline-block';
-        }
-        if (elements.deepScanBtn) {
-            elements.deepScanBtn.style.display = scanning ? 'none' : 'inline-block';
-        }
-        if (elements.stopScanBtn) {
-            elements.stopScanBtn.style.display = scanning ? 'inline-block' : 'none';
+        // Update buttons based on scanning state and current mode
+        if (scanning) {
+            // Scanning: hide start buttons, show stop button
+            if (elements.quickScanBtn) elements.quickScanBtn.style.display = 'none';
+            if (elements.deepScanBtn) elements.deepScanBtn.style.display = 'none';
+            if (elements.stopScanBtn) elements.stopScanBtn.style.display = 'inline-block';
+        } else {
+            // Not scanning: show appropriate start button based on mode, hide stop
+            if (elements.quickScanBtn) {
+                elements.quickScanBtn.style.display = scanMode === 'quick' ? 'inline-block' : 'none';
+            }
+            if (elements.deepScanBtn) {
+                elements.deepScanBtn.style.display = scanMode === 'deep' ? 'inline-block' : 'none';
+            }
+            if (elements.stopScanBtn) elements.stopScanBtn.style.display = 'none';
         }
 
         // Update status
@@ -1426,3 +1463,390 @@ document.addEventListener('DOMContentLoaded', () => {
         WiFiMode.init();
     }
 });
+
+// =============================================================================
+// WiFi Helper Functions
+// Implements UI helper functions for Monitor Mode, Deauth, Watch List, etc.
+// =============================================================================
+
+const WiFiHelpers = (function() {
+    'use strict';
+
+    // Note: Monitor mode and attack endpoints are in /wifi/ (v1), not /wifi/v2/
+    const CONFIG = {
+        apiBase: '/wifi/v2',
+        apiV1Base: '/wifi',
+    };
+
+    // Watch list state
+    let watchList = [];
+
+    // ==========================================================================
+    // Monitor Mode
+    // ==========================================================================
+
+    async function enableMonitorMode() {
+        const iface = document.getElementById('wifiInterfaceSelect')?.value;
+        const killProcesses = document.getElementById('killProcesses')?.checked || false;
+        const startBtn = document.getElementById('monitorStartBtn');
+        const stopBtn = document.getElementById('monitorStopBtn');
+        const statusEl = document.getElementById('monitorStatus');
+
+        // Provide immediate feedback
+        console.log('[WiFiHelpers] Enable monitor mode clicked');
+        showNotification('Monitor Mode', 'Enabling monitor mode...', 'info');
+
+        if (!iface) {
+            showNotification('Monitor Mode', 'No interface selected. Please wait for interface detection.', 'error');
+            return;
+        }
+
+        // Update UI to show processing
+        if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Enabling...';
+        }
+
+        try {
+            // Use v1 API which has monitor mode support
+            const response = await fetch(`${CONFIG.apiV1Base}/monitor`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interface: iface,
+                    action: 'enable',
+                    kill_processes: killProcesses
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || result.message || 'Failed to enable monitor mode');
+            }
+
+            // Success - update UI
+            if (startBtn) {
+                startBtn.style.display = 'none';
+                startBtn.disabled = false;
+                startBtn.textContent = 'Enable Monitor';
+            }
+            if (stopBtn) stopBtn.style.display = 'inline-block';
+            if (statusEl) {
+                statusEl.innerHTML = `Monitor mode: <span style="color: var(--accent-green);">Active</span> (${result.monitor_interface || iface})`;
+            }
+
+            showNotification('Monitor Mode', `Enabled on ${result.monitor_interface || iface}`, 'success');
+        } catch (error) {
+            console.error('[WiFiHelpers] Enable monitor mode error:', error);
+            showNotification('Monitor Mode', error.message, 'error');
+
+            // Reset button
+            if (startBtn) {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Enable Monitor';
+            }
+        }
+    }
+
+    async function disableMonitorMode() {
+        const iface = document.getElementById('wifiInterfaceSelect')?.value;
+        const startBtn = document.getElementById('monitorStartBtn');
+        const stopBtn = document.getElementById('monitorStopBtn');
+        const statusEl = document.getElementById('monitorStatus');
+
+        console.log('[WiFiHelpers] Disable monitor mode clicked');
+        showNotification('Monitor Mode', 'Disabling monitor mode...', 'info');
+
+        if (stopBtn) {
+            stopBtn.disabled = true;
+            stopBtn.textContent = 'Disabling...';
+        }
+
+        try {
+            // Use v1 API which has monitor mode support
+            const response = await fetch(`${CONFIG.apiV1Base}/monitor`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interface: iface,
+                    action: 'disable'
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || result.message || 'Failed to disable monitor mode');
+            }
+
+            // Success - update UI
+            if (stopBtn) {
+                stopBtn.style.display = 'none';
+                stopBtn.disabled = false;
+                stopBtn.textContent = 'Disable Monitor';
+            }
+            if (startBtn) startBtn.style.display = 'inline-block';
+            if (statusEl) {
+                statusEl.innerHTML = `Monitor mode: <span style="color: var(--accent-red);">Inactive</span>`;
+            }
+
+            showNotification('Monitor Mode', 'Disabled successfully', 'info');
+        } catch (error) {
+            console.error('[WiFiHelpers] Disable monitor mode error:', error);
+            showNotification('Monitor Mode', error.message, 'error');
+
+            // Reset button
+            if (stopBtn) {
+                stopBtn.disabled = false;
+                stopBtn.textContent = 'Disable Monitor';
+            }
+        }
+    }
+
+    // ==========================================================================
+    // Deauth Attack
+    // ==========================================================================
+
+    async function sendDeauth() {
+        const bssid = document.getElementById('targetBssid')?.value?.trim();
+        const client = document.getElementById('targetClient')?.value?.trim() || 'FF:FF:FF:FF:FF:FF';
+        const count = parseInt(document.getElementById('deauthCount')?.value) || 5;
+        const iface = document.getElementById('wifiInterfaceSelect')?.value;
+
+        console.log('[WiFiHelpers] Send deauth clicked');
+
+        if (!bssid || !/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(bssid)) {
+            showNotification('Deauth Attack', 'Please enter a valid target BSSID (e.g., AA:BB:CC:DD:EE:FF)', 'error');
+            return;
+        }
+
+        // Confirm action
+        if (!confirm(`Send ${count} deauth frames to ${bssid}?\n\nWARNING: Only use on networks you are authorized to test.`)) {
+            return;
+        }
+
+        showNotification('Deauth Attack', `Sending ${count} deauth frames...`, 'info');
+
+        try {
+            // Use v1 API which has deauth support
+            const response = await fetch(`${CONFIG.apiV1Base}/deauth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bssid: bssid,
+                    client: client,
+                    count: count,
+                    interface: iface
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || result.message || 'Deauth attack failed');
+            }
+
+            showNotification('Deauth Attack', `Sent ${count} deauth frames to ${bssid}`, 'success');
+        } catch (error) {
+            console.error('[WiFiHelpers] Deauth error:', error);
+            showNotification('Deauth Attack', error.message, 'error');
+        }
+    }
+
+    // ==========================================================================
+    // Watch List (Proximity Alerts)
+    // ==========================================================================
+
+    function addWatchMac() {
+        const input = document.getElementById('watchMacInput');
+        const mac = input?.value?.trim().toUpperCase();
+
+        console.log('[WiFiHelpers] Add watch MAC clicked, value:', mac);
+
+        if (!mac) {
+            showNotification('Watch List', 'Please enter a MAC address', 'error');
+            return;
+        }
+
+        if (!/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(mac)) {
+            showNotification('Watch List', 'Invalid format. Use XX:XX:XX:XX:XX:XX', 'error');
+            return;
+        }
+
+        if (watchList.includes(mac)) {
+            showNotification('Watch List', 'MAC address already in watch list', 'info');
+            return;
+        }
+
+        watchList.push(mac);
+        input.value = '';
+        updateWatchListDisplay();
+        showNotification('Watch List', `Added ${mac} to watch list`, 'success');
+
+        // Save to localStorage
+        try {
+            localStorage.setItem('wifiWatchList', JSON.stringify(watchList));
+        } catch (e) {
+            console.warn('[WiFiHelpers] Could not save watch list to localStorage');
+        }
+    }
+
+    function removeWatchMac(mac) {
+        watchList = watchList.filter(m => m !== mac);
+        updateWatchListDisplay();
+
+        // Save to localStorage
+        try {
+            localStorage.setItem('wifiWatchList', JSON.stringify(watchList));
+        } catch (e) {
+            console.warn('[WiFiHelpers] Could not save watch list to localStorage');
+        }
+    }
+
+    function updateWatchListDisplay() {
+        const container = document.getElementById('watchList');
+        if (!container) return;
+
+        if (watchList.length === 0) {
+            container.innerHTML = '<span style="color: var(--text-dim);">No MAC addresses in watch list</span>';
+            return;
+        }
+
+        container.innerHTML = watchList.map(mac => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border-color);">
+                <code style="font-size: 10px;">${mac}</code>
+                <button onclick="WiFiHelpers.removeWatchMac('${mac}')" style="background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 12px; padding: 2px 6px;">&times;</button>
+            </div>
+        `).join('');
+    }
+
+    function loadWatchList() {
+        try {
+            const saved = localStorage.getItem('wifiWatchList');
+            if (saved) {
+                watchList = JSON.parse(saved);
+                updateWatchListDisplay();
+            }
+        } catch (e) {
+            console.warn('[WiFiHelpers] Could not load watch list from localStorage');
+        }
+    }
+
+    // ==========================================================================
+    // Handshake Capture
+    // ==========================================================================
+
+    async function checkCaptureStatus() {
+        const statusEl = document.getElementById('captureStatus');
+        const bssid = document.getElementById('captureTargetBssid')?.textContent;
+
+        console.log('[WiFiHelpers] Check capture status clicked');
+        showNotification('Handshake Capture', 'Checking capture status...', 'info');
+
+        try {
+            // Use v1 API which has handshake capture support
+            const response = await fetch(`${CONFIG.apiV1Base}/handshake/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bssid: bssid }),
+            });
+            const result = await response.json();
+
+            if (statusEl) {
+                if (result.capturing || result.running) {
+                    statusEl.textContent = result.handshake_found ? 'Handshake captured!' : 'Capturing...';
+                    statusEl.style.color = result.handshake_found ? 'var(--accent-green)' : 'var(--accent-orange)';
+                } else {
+                    statusEl.textContent = 'Not capturing';
+                    statusEl.style.color = 'var(--text-secondary)';
+                }
+            }
+
+            if (result.handshake_found) {
+                showNotification('Handshake Capture', `Handshake captured! File: ${result.capture_file || 'check captures folder'}`, 'success');
+            } else if (result.capturing || result.running) {
+                showNotification('Handshake Capture', 'Still capturing, no handshake yet...', 'info');
+            } else {
+                showNotification('Handshake Capture', 'No active capture', 'info');
+            }
+        } catch (error) {
+            console.error('[WiFiHelpers] Check capture status error:', error);
+            showNotification('Handshake Capture', error.message, 'error');
+            if (statusEl) {
+                statusEl.textContent = 'Error checking status';
+                statusEl.style.color = 'var(--accent-red)';
+            }
+        }
+    }
+
+    async function stopHandshakeCapture() {
+        const panel = document.getElementById('captureStatusPanel');
+        const statusEl = document.getElementById('captureStatus');
+
+        console.log('[WiFiHelpers] Stop handshake capture clicked');
+        showNotification('Handshake Capture', 'Stopping capture...', 'info');
+
+        try {
+            // Use v1 API - handshake stop endpoint
+            const response = await fetch(`${CONFIG.apiV1Base}/scan/stop`, {
+                method: 'POST',
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || result.message || 'Failed to stop capture');
+            }
+
+            if (statusEl) {
+                statusEl.textContent = 'Stopped';
+                statusEl.style.color = 'var(--text-secondary)';
+            }
+
+            // Hide panel after delay
+            setTimeout(() => {
+                if (panel) panel.style.display = 'none';
+            }, 2000);
+
+            showNotification('Handshake Capture', 'Capture stopped', 'success');
+        } catch (error) {
+            console.error('[WiFiHelpers] Stop capture error:', error);
+            showNotification('Handshake Capture', error.message, 'error');
+        }
+    }
+
+    // ==========================================================================
+    // Utility
+    // ==========================================================================
+
+    function showNotification(title, message, type) {
+        if (typeof window.showNotification === 'function') {
+            window.showNotification(title, message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
+        }
+    }
+
+    // ==========================================================================
+    // Initialize
+    // ==========================================================================
+
+    // Load watch list on page load
+    document.addEventListener('DOMContentLoaded', loadWatchList);
+
+    // ==========================================================================
+    // Public API
+    // ==========================================================================
+
+    return {
+        enableMonitorMode,
+        disableMonitorMode,
+        sendDeauth,
+        addWatchMac,
+        removeWatchMac,
+        checkCaptureStatus,
+        stopHandshakeCapture,
+        getWatchList: () => [...watchList],
+    };
+})();

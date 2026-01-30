@@ -5,17 +5,26 @@
                         <p style="color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 15px;">
                             Scan for nearby WiFi networks, analyze channels, and monitor wireless activity.
                         </p>
-                        <div style="background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: 4px; padding: 8px; font-size: 10px;">
-                            <span style="color: var(--accent-cyan);">Controls in function bar above</span>
-                        </div>
                         <!-- Scan Mode Tabs -->
                         <div style="margin-top: 12px;">
-                            <div class="wifi-scan-mode-tabs" style="display: flex; gap: 4px;">
-                                <button id="wifiScanModeQuick" class="wifi-mode-tab active" style="flex: 1; padding: 8px; font-size: 11px; background: var(--accent-green); color: #000; border: none; border-radius: 4px; cursor: pointer;">
+                            <div class="wifi-scan-mode-tabs" style="display: flex; gap: 4px; margin-bottom: 10px;">
+                                <button id="wifiScanModeQuick" class="wifi-mode-tab active">
                                     Quick Scan
                                 </button>
-                                <button id="wifiScanModeDeep" class="wifi-mode-tab" style="flex: 1; padding: 8px; font-size: 11px; background: var(--bg-tertiary); color: #888; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer;">
+                                <button id="wifiScanModeDeep" class="wifi-mode-tab">
                                     Deep Scan
+                                </button>
+                            </div>
+                            <!-- Scan Control Buttons -->
+                            <div id="wifiScanControls" style="display: flex; gap: 8px;">
+                                <button id="wifiQuickScanBtn" class="preset-btn wifi-start-btn" onclick="if(typeof WiFiMode !== 'undefined') WiFiMode.startQuickScan()" style="flex: 1;">
+                                    Start Quick Scan
+                                </button>
+                                <button id="wifiDeepScanBtn" class="preset-btn wifi-start-btn" onclick="if(typeof WiFiMode !== 'undefined') WiFiMode.startDeepScan()" style="flex: 1; display: none;">
+                                    Start Deep Scan
+                                </button>
+                                <button id="wifiStopScanBtn" class="preset-btn wifi-stop-btn" onclick="if(typeof WiFiMode !== 'undefined') WiFiMode.stopScan()" style="flex: 1; display: none;">
+                                    Stop Scan
                                 </button>
                             </div>
                             <div id="wifiCapabilityStatus" class="info-text" style="margin-top: 8px; font-size: 10px;"></div>
@@ -32,10 +41,10 @@
                     <div class="section">
                         <h3>Monitor Mode</h3>
                         <div style="display: flex; gap: 8px;">
-                            <button class="preset-btn" id="monitorStartBtn" onclick="enableMonitorMode()" style="flex: 1; background: var(--accent-green); color: #000;">
+                            <button class="preset-btn wifi-monitor-btn" id="monitorStartBtn" onclick="WiFiHelpers.enableMonitorMode()" style="flex: 1;">
                                 Enable Monitor
                             </button>
-                            <button class="preset-btn" id="monitorStopBtn" onclick="disableMonitorMode()" style="flex: 1; display: none;">
+                            <button class="preset-btn wifi-monitor-stop-btn" id="monitorStopBtn" onclick="WiFiHelpers.disableMonitorMode()" style="flex: 1; display: none;">
                                 Disable Monitor
                             </button>
                         </div>
@@ -75,7 +84,7 @@
                             <label>Deauth Count</label>
                             <input type="text" id="deauthCount" value="5" placeholder="5">
                         </div>
-                        <button class="preset-btn" onclick="sendDeauth()" style="width: 100%; border-color: var(--accent-red); color: var(--accent-red);">
+                        <button class="preset-btn wifi-danger-btn" onclick="WiFiHelpers.sendDeauth()" style="width: 100%;">
                             Send Deauth
                         </button>
                     </div>
@@ -88,7 +97,7 @@
                         <div class="form-group">
                             <input type="text" id="watchMacInput" placeholder="AA:BB:CC:DD:EE:FF">
                         </div>
-                        <button class="preset-btn" onclick="addWatchMac()" style="width: 100%; margin-bottom: 8px;">
+                        <button class="preset-btn" onclick="WiFiHelpers.addWatchMac()" style="width: 100%; margin-bottom: 8px;">
                             Add to Watch List
                         </button>
                         <div id="watchList" style="max-height: 80px; overflow-y: auto; font-size: 10px; color: var(--text-dim);"></div>
@@ -115,10 +124,10 @@
                                 <span id="captureStatus" style="font-weight: bold;">--</span>
                             </div>
                             <div style="display: flex; gap: 8px;">
-                                <button class="preset-btn" onclick="checkCaptureStatus()" style="flex: 1; font-size: 10px; padding: 4px;">
+                                <button class="preset-btn" onclick="WiFiHelpers.checkCaptureStatus()" style="flex: 1; font-size: 10px; padding: 4px;">
                                     Check Status
                                 </button>
-                                <button class="preset-btn" onclick="stopHandshakeCapture()" style="flex: 1; font-size: 10px; padding: 4px; background: var(--accent-red); border: none; color: #fff;">
+                                <button class="preset-btn wifi-stop-btn" onclick="WiFiHelpers.stopHandshakeCapture()" style="flex: 1; font-size: 10px; padding: 4px;">
                                     Stop Capture
                                 </button>
                             </div>
@@ -137,10 +146,10 @@
                         </div>
                     </div>
 
-                    <div class="section">
+                    <div class="section" id="wifiExportSection">
                         <h3>Export</h3>
                         <div style="display: flex; gap: 8px;">
-                            <button class="preset-btn" onclick="WiFiMode.exportData('csv')" style="flex: 1;">
+                            <button class="preset-btn" id="wifiExportCsvBtn" onclick="WiFiMode.exportData('csv')" style="flex: 1;">
                                 Export CSV
                             </button>
                             <button class="preset-btn" onclick="WiFiMode.exportData('json')" style="flex: 1;">

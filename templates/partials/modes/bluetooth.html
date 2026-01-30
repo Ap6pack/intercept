@@ -2,6 +2,7 @@
                 <div id="bluetoothMode" class="mode-content">
                     <!-- Capability Status -->
                     <div id="btCapabilityStatus" class="section" style="display: none;">
+                        <span id="btCapabilityMarker" style="display: none;"></span>
                         <!-- Populated by JavaScript with capability warnings -->
                     </div>
 
@@ -50,10 +51,10 @@
                     <!-- Message Container for status cards -->
                     <div id="btMessageContainer"></div>
 
-                    <div class="section" style="margin-top: 10px;">
+                    <div class="section" id="btExportSection" style="margin-top: 10px;">
                         <h3>Export</h3>
                         <div style="display: flex; gap: 8px;">
-                            <button class="preset-btn" onclick="btExport('csv')" style="flex: 1;">
+                            <button class="preset-btn" id="btExportCsvBtn" onclick="btExport('csv')" style="flex: 1;">
                                 Export CSV
                             </button>
                             <button class="preset-btn" onclick="btExport('json')" style="flex: 1;">
