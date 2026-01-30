@@ -4,6 +4,7 @@
  */
 @import url('./core/variables.css');
 @import url('./core/layout.css');
+@import url('./core/components.css');
 
 * {
     margin: 0;
