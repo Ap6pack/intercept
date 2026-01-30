@@ -2734,17 +2734,18 @@
             // Handle mode parameter from URL (e.g., /?mode=aprs)
             const urlParams = new URLSearchParams(window.location.search);
             const modeParam = urlParams.get('mode');
-            if (modeParam && typeof switchMode === 'function') {
-                // Valid modes that can be switched to
-                const validModes = ['pager', 'sensor', 'rtlamr', 'satellite', 'sstv', 'wifi', 'bluetooth', 'listening', 'aprs', 'tscm', 'spystations', 'meshtastic'];
-                if (validModes.includes(modeParam)) {
-                    // Hide welcome overlay if present (skip the welcome screen)
-                    const welcomePage = document.getElementById('welcomePage');
-                    if (welcomePage) {
-                        welcomePage.style.display = 'none';
-                    }
-                    switchMode(modeParam);
+            const validModes = ['pager', 'sensor', 'rtlamr', 'satellite', 'sstv', 'wifi', 'bluetooth', 'listening', 'aprs', 'tscm', 'spystations', 'meshtastic'];
+
+            if (modeParam && typeof switchMode === 'function' && validModes.includes(modeParam)) {
+                // Hide welcome overlay if present (skip the welcome screen)
+                const welcomePage = document.getElementById('welcomePage');
+                if (welcomePage) {
+                    welcomePage.style.display = 'none';
                 }
+                switchMode(modeParam);
+            } else if (typeof switchMode === 'function') {
+                // Initialize default mode (pager) to show function strip
+                switchMode(currentMode);
             }
         });
 
@@ -2766,6 +2767,8 @@
                 dropdown.classList.add('open');
             }
         }
+        // Ensure window.toggleNavDropdown is set to override nav.html fallback
+        window.toggleNavDropdown = toggleNavDropdown;
 
         function closeAllDropdowns() {
             document.querySelectorAll('.mode-nav-dropdown').forEach(d => d.classList.remove('open'));
@@ -3281,6 +3284,9 @@
                 }
             }
         }
+
+        // Explicitly set window.switchMode to override any fallback defined in nav.html
+        window.switchMode = switchMode;
 
         // Handle window resize for maps (especially important on mobile orientation change)
         window.addEventListener('resize', function () {
