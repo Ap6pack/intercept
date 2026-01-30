@@ -327,3 +327,94 @@ li {
     background: var(--accent-cyan-dim);
     color: var(--text-primary);
 }
+
+/* ============================================
+   UX POLISH - TRANSITIONS & INTERACTIONS
+   ============================================ */
+
+/* Smooth page transitions */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Better focus ring for all interactive elements */
+:focus-visible {
+    outline: 2px solid var(--accent-cyan);
+    outline-offset: 2px;
+}
+
+/* Remove focus ring for mouse users */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Active state feedback */
+button:active:not(:disabled),
+a:active,
+[role="button"]:active {
+    transform: scale(0.98);
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast),
+        transform var(--transition-fast),
+        opacity var(--transition-fast);
+}
+
+/* Subtle hover lift effect for cards and panels */
+.card:hover,
+.panel:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Link underline on hover */
+a:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--accent-cyan);
+    color: var(--bg-primary);
+    padding: var(--space-2) var(--space-4);
+    z-index: 9999;
+    transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --border-color: #4b5563;
+        --text-secondary: #d1d5db;
+    }
+}

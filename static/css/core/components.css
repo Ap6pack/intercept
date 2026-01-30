@@ -588,3 +588,136 @@
     background: var(--border-color);
     margin: 0 var(--space-3);
 }
+
+/* ============================================
+   UX POLISH - ENHANCED INTERACTIONS
+   ============================================ */
+
+/* Button hover lift */
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Card/Panel hover effects */
+.card,
+.panel {
+    transition:
+        box-shadow var(--transition-base),
+        border-color var(--transition-base),
+        transform var(--transition-base);
+}
+
+.card:hover,
+.panel:hover {
+    border-color: var(--border-light);
+}
+
+/* Stats strip value highlight on hover */
+.strip-stat {
+    transition: background-color var(--transition-fast);
+    border-radius: var(--radius-sm);
+    cursor: default;
+}
+
+.strip-stat:hover {
+    background: var(--bg-tertiary);
+}
+
+/* Status dot pulse animation */
+.status-dot.online,
+.status-dot.active {
+    animation: statusGlow 2s ease-in-out infinite;
+}
+
+@keyframes statusGlow {
+    0%, 100% {
+        box-shadow: 0 0 6px var(--status-online);
+    }
+    50% {
+        box-shadow: 0 0 12px var(--status-online), 0 0 20px var(--status-online);
+    }
+}
+
+/* Badge hover effect */
+.badge {
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+/* Alert entrance animation */
+.alert {
+    animation: alertSlideIn 0.3s ease-out;
+}
+
+@keyframes alertSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Loading spinner smooth appearance */
+.spinner {
+    animation: spin 0.8s linear infinite, fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Input focus glow */
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px var(--accent-cyan-dim), 0 0 20px rgba(74, 158, 255, 0.1);
+}
+
+/* Nav item active indicator */
+.mode-nav-btn.active::after,
+.mobile-nav-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    background: currentColor;
+    border-radius: var(--radius-full);
+}
+
+/* Smooth tooltip appearance */
+[data-tooltip]::after {
+    transition:
+        opacity var(--transition-fast),
+        visibility var(--transition-fast),
+        transform var(--transition-fast);
+    transform: translateX(-50%) translateY(-4px);
+}
+
+[data-tooltip]:hover::after {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Disabled state with better visual feedback */
+:disabled,
+.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(30%);
+}
