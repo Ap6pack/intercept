@@ -640,8 +640,7 @@ header h1 {
 /* Mode Navigation Bar */
 .mode-nav {
     display: none;
-    background: #151a23; /* Explicit color for consistency */
-    background: var(--bg-tertiary, #151a23);
+    background: #151a23 !important; /* Explicit color - forced to ensure consistency */
     border-bottom: 1px solid var(--border-color);
     padding: 0 20px;
 }
