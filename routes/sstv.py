@@ -404,7 +404,7 @@ def iss_position():
 
                 return jsonify(result)
     except Exception as e:
-        logger.warning(f"Open Notify API failed: {e}")
+        logger.debug(f"Open Notify API failed: {e}")
 
     # Try fallback API: Where The ISS At
     try:
