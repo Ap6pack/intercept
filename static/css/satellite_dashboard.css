@@ -3,6 +3,7 @@
  * Imports design tokens for consistency, with dashboard-specific overrides
  */
 @import url('./core/variables.css');
+@import url('./core/layout.css');
 
 * {
     margin: 0;
