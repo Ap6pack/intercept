@@ -49,6 +49,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modes/sstv.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components/toast.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components/function-strip.css') }}">
 </head>
 
 <body>
@@ -535,23 +536,59 @@
 
                 <!-- WiFi Layout Container -->
                 <div class="wifi-layout-container" id="wifiLayoutContainer" style="display: none;">
-                    <!-- Status Bar -->
-                    <div class="wifi-status-bar">
-                        <div class="wifi-status-item">
-                            <span class="wifi-status-label">Networks:</span>
-                            <span class="wifi-status-value" id="wifiNetworkCount">0</span>
-                        </div>
-                        <div class="wifi-status-item">
-                            <span class="wifi-status-label">Clients:</span>
-                            <span class="wifi-status-value" id="wifiClientCount">0</span>
-                        </div>
-                        <div class="wifi-status-item">
-                            <span class="wifi-status-label">Hidden:</span>
-                            <span class="wifi-status-value" id="wifiHiddenCount">0</span>
-                        </div>
-                        <div class="wifi-status-item" id="wifiScanStatus">
-                            <span class="wifi-status-indicator idle"></span>
-                            <span>Ready</span>
+                    <!-- WiFi Function Bar -->
+                    <div class="function-strip wifi-strip" id="wifiStrip">
+                        <div class="function-strip-inner">
+                            <!-- Stats -->
+                            <div class="strip-stat">
+                                <span class="strip-value" id="wifiStripAPs">0</span>
+                                <span class="strip-label">APs</span>
+                            </div>
+                            <div class="strip-stat">
+                                <span class="strip-value" id="wifiStripClients">0</span>
+                                <span class="strip-label">CLIENTS</span>
+                            </div>
+                            <div class="strip-stat">
+                                <span class="strip-value" id="wifiStripHidden">0</span>
+                                <span class="strip-label">HIDDEN</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Controls -->
+                            <div class="strip-control">
+                                <select id="wifiStripInterface" class="strip-select">
+                                    <option value="">Interface...</option>
+                                </select>
+                            </div>
+                            <div class="strip-control">
+                                <select id="wifiStripBand" class="strip-select">
+                                    <option value="abg">All Bands</option>
+                                    <option value="bg">2.4 GHz</option>
+                                    <option value="a">5 GHz</option>
+                                </select>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Tool Status -->
+                            <div class="strip-tools">
+                                <span class="strip-tool" id="wifiStripMon" title="Monitor Mode">MON</span>
+                                <span class="strip-tool" id="wifiStripAir" title="airodump-ng">AIR</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Actions -->
+                            <button type="button" class="strip-btn" id="wifiStripQuickBtn" onclick="WiFiMode.startQuickScan()">
+                                QUICK
+                            </button>
+                            <button type="button" class="strip-btn primary" id="wifiStripDeepBtn" onclick="WiFiMode.startDeepScan()">
+                                ▶ DEEP
+                            </button>
+                            <button type="button" class="strip-btn stop" id="wifiStripStopBtn" onclick="WiFiMode.stopScan()" style="display: none;">
+                                ◼ STOP
+                            </button>
+                            <!-- Status -->
+                            <div class="strip-status">
+                                <div class="status-dot inactive" id="wifiStripDot"></div>
+                                <span id="wifiStripStatus">STANDBY</span>
+                            </div>
+                            <div class="strip-time" id="wifiStripTime">--:--:-- UTC</div>
                         </div>
                     </div>
 
@@ -704,7 +741,60 @@
                 </div>
 
                 <!-- Bluetooth Layout Container (visualizations left, device cards right) -->
-                <div class="bt-layout-container" id="btLayoutContainer" style="display: none;">
+                <div class="bt-layout-container" id="btLayoutContainer" style="display: none; flex-direction: column;">
+                    <!-- Bluetooth Function Bar -->
+                    <div class="function-strip bt-strip" id="btStrip" style="margin: 0 0 12px 0;">
+                        <div class="function-strip-inner">
+                            <!-- Stats -->
+                            <div class="strip-stat">
+                                <span class="strip-value" id="btStripDevices">0</span>
+                                <span class="strip-label">DEVICES</span>
+                            </div>
+                            <div class="strip-stat">
+                                <span class="strip-value" id="btStripTrackers">0</span>
+                                <span class="strip-label">TRACKERS</span>
+                            </div>
+                            <div class="strip-stat signal-stat" id="btStripRssiStat">
+                                <span class="strip-value" id="btStripRssi">--</span>
+                                <span class="strip-label">RSSI</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Controls -->
+                            <div class="strip-control">
+                                <select id="btStripAdapter" class="strip-select">
+                                    <option value="">Default Adapter</option>
+                                </select>
+                            </div>
+                            <div class="strip-control">
+                                <select id="btStripTransport" class="strip-select">
+                                    <option value="auto">Auto</option>
+                                    <option value="le">BLE Only</option>
+                                    <option value="br_edr">Classic</option>
+                                </select>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Tool Status -->
+                            <div class="strip-tools">
+                                <span class="strip-tool" id="btStripBleak" title="Bleak/BlueZ">BLE</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Actions -->
+                            <button type="button" class="strip-btn primary" id="btStripStartBtn" onclick="btStartScanFromStrip()">
+                                ▶ START
+                            </button>
+                            <button type="button" class="strip-btn stop" id="btStripStopBtn" onclick="btStopScan()" style="display: none;">
+                                ◼ STOP
+                            </button>
+                            <!-- Status -->
+                            <div class="strip-status">
+                                <div class="status-dot inactive" id="btStripDot"></div>
+                                <span id="btStripStatus">STANDBY</span>
+                            </div>
+                            <div class="strip-time" id="btStripTime">--:--:-- UTC</div>
+                        </div>
+                    </div>
+                    <!-- Main Bluetooth content row -->
+                    <div style="display: flex; gap: 15px; flex: 1; min-height: 0;">
                     <!-- Left: Bluetooth Visualizations -->
                     <div class="bt-visuals-column" id="btVisuals">
                         <!-- Device Detail Panel (always visible) -->
@@ -849,6 +939,7 @@
                             </div>
                         </div>
                     </div>
+                    </div><!-- End main BT content row -->
                 </div>
 
                 <!-- Bluetooth Device Detail Modal -->
@@ -986,6 +1077,63 @@
 
                 <!-- Listening Post Visualizations - Professional Ham Radio Scanner -->
                 <div class="wifi-visuals" id="listeningPostVisuals" style="display: none;">
+                    <!-- Listening Post Function Bar -->
+                    <div class="function-strip listening-strip" id="listeningStrip" style="grid-column: span 4; margin-bottom: 0;">
+                        <div class="function-strip-inner">
+                            <!-- Stats -->
+                            <div class="strip-stat">
+                                <span class="strip-value" id="listeningStripFreq">--</span>
+                                <span class="strip-label">MHz</span>
+                            </div>
+                            <div class="strip-stat">
+                                <span class="strip-value" id="listeningStripBW">--</span>
+                                <span class="strip-label">BW</span>
+                            </div>
+                            <div class="strip-stat">
+                                <span class="strip-value" id="listeningStripSignals">0</span>
+                                <span class="strip-label">SIGNALS</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Controls -->
+                            <div class="strip-control">
+                                <span class="strip-input-label">FREQ</span>
+                                <input type="text" id="listeningStripFreqInput" class="strip-input wide" placeholder="118.000">
+                            </div>
+                            <div class="strip-control">
+                                <select id="listeningStripMode" class="strip-select">
+                                    <option value="AM">AM</option>
+                                    <option value="FM">FM</option>
+                                    <option value="NFM">NFM</option>
+                                    <option value="WFM">WFM</option>
+                                    <option value="USB">USB</option>
+                                    <option value="LSB">LSB</option>
+                                </select>
+                            </div>
+                            <div class="strip-control">
+                                <span class="strip-input-label">GAIN</span>
+                                <input type="number" id="listeningStripGain" class="strip-input" value="30" min="0" max="50">
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Tool Status -->
+                            <div class="strip-tools">
+                                <span class="strip-tool" id="listeningStripSdr" title="SDR Device">SDR</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Actions -->
+                            <button type="button" class="strip-btn primary" id="listeningStripStartBtn" onclick="startListeningFromStrip()">
+                                ▶ START
+                            </button>
+                            <button type="button" class="strip-btn stop" id="listeningStripStopBtn" onclick="stopListening()" style="display: none;">
+                                ◼ STOP
+                            </button>
+                            <!-- Status -->
+                            <div class="strip-status">
+                                <div class="status-dot inactive" id="listeningStripDot"></div>
+                                <span id="listeningStripStatus">STANDBY</span>
+                            </div>
+                            <div class="strip-time" id="listeningStripTime">--:--:-- UTC</div>
+                        </div>
+                    </div>
 
                     <!-- TOP: FREQUENCY DISPLAY PANEL -->
                     <div class="radio-module-box scanner-main" style="grid-column: span 4; padding: 12px;">
@@ -1242,8 +1390,8 @@
                                 <!-- Action Buttons -->
                                 <button class="radio-action-btn scan" id="radioScanBtn" onclick="toggleScanner()"
                                     style="padding: 12px; font-size: 13px; width: 100%; font-weight: bold;"><span class="icon icon--sm" style="margin-right: 4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg></span>SCAN</button>
-                                <button class="radio-action-btn" id="radioListenBtn" onclick="toggleDirectListen()"
-                                    style="padding: 10px; font-size: 12px; width: 100%; background: var(--accent-green); border: none; color: #fff;"><span class="icon icon--sm" style="margin-right: 4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span>LISTEN</button>
+                                <button class="radio-action-btn listen" id="radioListenBtn" onclick="toggleDirectListen()"
+                                    style="padding: 12px; font-size: 13px; width: 100%; font-weight: bold;"><span class="icon icon--sm" style="margin-right: 4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg></span>LISTEN</button>
                             </div>
                         </div>
                     </div>
@@ -1353,6 +1501,62 @@
 
                 <!-- TSCM Dashboard -->
                 <div id="tscmVisuals" class="tscm-dashboard" style="display: none; padding: 16px;">
+                    <!-- TSCM Function Bar -->
+                    <div class="function-strip tscm-strip" id="tscmStrip" style="margin-bottom: 12px;">
+                        <div class="function-strip-inner">
+                            <!-- Stats -->
+                            <div class="strip-stat threat-high">
+                                <span class="strip-value" id="tscmStripThreats">0</span>
+                                <span class="strip-label">THREATS</span>
+                            </div>
+                            <div class="strip-stat threat-review">
+                                <span class="strip-value" id="tscmStripReview">0</span>
+                                <span class="strip-label">REVIEW</span>
+                            </div>
+                            <div class="strip-stat threat-info">
+                                <span class="strip-value" id="tscmStripInfo">0</span>
+                                <span class="strip-label">INFO</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Controls -->
+                            <div class="strip-control">
+                                <select id="tscmStripSweepType" class="strip-select">
+                                    <option value="quick">Quick Scan</option>
+                                    <option value="standard" selected>Standard</option>
+                                    <option value="full">Full Sweep</option>
+                                    <option value="wireless_cameras">Cameras</option>
+                                    <option value="gps_trackers">GPS Track</option>
+                                </select>
+                            </div>
+                            <div class="strip-control">
+                                <select id="tscmStripBaseline" class="strip-select">
+                                    <option value="">No Baseline</option>
+                                </select>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Tool Status -->
+                            <div class="strip-tools">
+                                <span class="strip-tool" id="tscmStripWifi" title="WiFi Scanner">WiFi</span>
+                                <span class="strip-tool" id="tscmStripBt" title="Bluetooth Scanner">BT</span>
+                                <span class="strip-tool" id="tscmStripRf" title="RF/SDR Scanner">RF</span>
+                            </div>
+                            <div class="strip-divider"></div>
+                            <!-- Actions -->
+                            <button type="button" class="strip-btn primary" id="tscmStripStartBtn" onclick="startTscmSweepFromStrip()">
+                                ▶ SWEEP
+                            </button>
+                            <button type="button" class="strip-btn stop" id="tscmStripStopBtn" onclick="stopTscmSweep()" style="display: none;">
+                                ◼ STOP
+                            </button>
+                            <!-- Status -->
+                            <div class="strip-status">
+                                <div class="status-dot inactive" id="tscmStripDot"></div>
+                                <span id="tscmStripStatus">STANDBY</span>
+                            </div>
+                            <div class="strip-time" id="tscmStripTime">--:--:-- UTC</div>
+                        </div>
+                    </div>
+
                     <!-- Legal Disclaimer Banner -->
                     <div class="tscm-legal-banner"
                         style="margin-bottom: 12px; padding: 8px 12px; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: 4px; font-size: 10px; color: #ffffff;">
@@ -1812,6 +2016,188 @@
                     </div>
                 </div>
 
+                <!-- Pager Function Bar -->
+                <div class="function-strip pager-strip" id="pagerStrip" style="display: none;">
+                    <div class="function-strip-inner">
+                        <!-- Stats -->
+                        <div class="strip-stat">
+                            <span class="strip-value" id="pagerStripFreq">--</span>
+                            <span class="strip-label">MHz</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="pagerStripMessages">0</span>
+                            <span class="strip-label">MESSAGES</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="pagerStripPocsag">0</span>
+                            <span class="strip-label">POCSAG</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="pagerStripFlex">0</span>
+                            <span class="strip-label">FLEX</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Controls -->
+                        <div class="strip-control">
+                            <select id="pagerStripPreset" class="strip-select" onchange="pagerPresetChanged()">
+                                <option value="153.350">153.350 MHz</option>
+                                <option value="152.480">152.480 MHz</option>
+                                <option value="157.450">157.450 MHz</option>
+                                <option value="custom">Custom...</option>
+                            </select>
+                        </div>
+                        <div class="strip-control" id="pagerStripCustomFreqControl" style="display: none;">
+                            <span class="strip-input-label">FREQ</span>
+                            <input type="text" id="pagerStripCustomFreq" class="strip-input wide" placeholder="153.350">
+                        </div>
+                        <div class="strip-control">
+                            <span class="strip-input-label">GAIN</span>
+                            <input type="number" id="pagerStripGain" class="strip-input" value="0" min="0" max="50">
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Tool Status -->
+                        <div class="strip-tools">
+                            <span class="strip-tool" id="pagerStripRtl" title="rtl_fm">RTL</span>
+                            <span class="strip-tool" id="pagerStripMm" title="multimon-ng">MM</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Actions -->
+                        <button type="button" class="strip-btn primary" id="pagerStripStartBtn" onclick="startDecodingFromStrip()">
+                            ▶ START
+                        </button>
+                        <button type="button" class="strip-btn stop" id="pagerStripStopBtn" onclick="stopDecoding()" style="display: none;">
+                            ◼ STOP
+                        </button>
+                        <!-- Status -->
+                        <div class="strip-status">
+                            <div class="status-dot inactive" id="pagerStripDot"></div>
+                            <span id="pagerStripStatus">STANDBY</span>
+                        </div>
+                        <div class="strip-time" id="pagerStripTime">--:--:-- UTC</div>
+                    </div>
+                </div>
+
+                <!-- Sensor Function Bar -->
+                <div class="function-strip sensor-strip" id="sensorStrip" style="display: none;">
+                    <div class="function-strip-inner">
+                        <!-- Stats -->
+                        <div class="strip-stat">
+                            <span class="strip-value" id="sensorStripFreq">--</span>
+                            <span class="strip-label">MHz</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="sensorStripSensors">0</span>
+                            <span class="strip-label">SENSORS</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="sensorStripReadings">0</span>
+                            <span class="strip-label">READINGS</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Controls -->
+                        <div class="strip-control">
+                            <select id="sensorStripPreset" class="strip-select" onchange="sensorPresetChanged()">
+                                <option value="433.92">433.92 MHz</option>
+                                <option value="315.00">315.00 MHz</option>
+                                <option value="868.00">868.00 MHz</option>
+                                <option value="915.00">915.00 MHz</option>
+                                <option value="custom">Custom...</option>
+                            </select>
+                        </div>
+                        <div class="strip-control" id="sensorStripCustomFreqControl" style="display: none;">
+                            <span class="strip-input-label">FREQ</span>
+                            <input type="text" id="sensorStripCustomFreq" class="strip-input wide" placeholder="433.92">
+                        </div>
+                        <div class="strip-control">
+                            <span class="strip-input-label">GAIN</span>
+                            <input type="number" id="sensorStripGain" class="strip-input" value="0" min="0" max="50">
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Tool Status -->
+                        <div class="strip-tools">
+                            <span class="strip-tool" id="sensorStripRtl" title="rtl_433">RTL</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Actions -->
+                        <button type="button" class="strip-btn primary" id="sensorStripStartBtn" onclick="startSensorDecodingFromStrip()">
+                            ▶ START
+                        </button>
+                        <button type="button" class="strip-btn stop" id="sensorStripStopBtn" onclick="stopSensorDecoding()" style="display: none;">
+                            ◼ STOP
+                        </button>
+                        <!-- Status -->
+                        <div class="strip-status">
+                            <div class="status-dot inactive" id="sensorStripDot"></div>
+                            <span id="sensorStripStatus">STANDBY</span>
+                        </div>
+                        <div class="strip-time" id="sensorStripTime">--:--:-- UTC</div>
+                    </div>
+                </div>
+
+                <!-- RTLAMR Function Bar -->
+                <div class="function-strip rtlamr-strip" id="rtlamrStrip" style="display: none;">
+                    <div class="function-strip-inner">
+                        <!-- Stats -->
+                        <div class="strip-stat">
+                            <span class="strip-value" id="rtlamrStripFreq">--</span>
+                            <span class="strip-label">MHz</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="rtlamrStripMeters">0</span>
+                            <span class="strip-label">METERS</span>
+                        </div>
+                        <div class="strip-stat">
+                            <span class="strip-value" id="rtlamrStripReadings">0</span>
+                            <span class="strip-label">READINGS</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Controls -->
+                        <div class="strip-control">
+                            <select id="rtlamrStripPreset" class="strip-select" onchange="rtlamrPresetChanged()">
+                                <option value="912.0">912.0 MHz (NA)</option>
+                                <option value="868.0">868.0 MHz (EU)</option>
+                                <option value="915.0">915.0 MHz</option>
+                                <option value="custom">Custom...</option>
+                            </select>
+                        </div>
+                        <div class="strip-control" id="rtlamrStripCustomFreqControl" style="display: none;">
+                            <span class="strip-input-label">FREQ</span>
+                            <input type="text" id="rtlamrStripCustomFreq" class="strip-input wide" placeholder="912.0">
+                        </div>
+                        <div class="strip-control">
+                            <span class="strip-input-label">GAIN</span>
+                            <input type="number" id="rtlamrStripGain" class="strip-input" value="0" min="0" max="50">
+                        </div>
+                        <div class="strip-control">
+                            <select id="rtlamrStripMsgType" class="strip-select">
+                                <option value="scm">SCM</option>
+                                <option value="scm+">SCM+</option>
+                                <option value="idm">IDM</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Tool Status -->
+                        <div class="strip-tools">
+                            <span class="strip-tool" id="rtlamrStripRtl" title="rtlamr">RTL</span>
+                        </div>
+                        <div class="strip-divider"></div>
+                        <!-- Actions -->
+                        <button type="button" class="strip-btn primary" id="rtlamrStripStartBtn" onclick="startRtlamrDecodingFromStrip()">
+                            ▶ START
+                        </button>
+                        <button type="button" class="strip-btn stop" id="rtlamrStripStopBtn" onclick="stopRtlamrDecoding()" style="display: none;">
+                            ◼ STOP
+                        </button>
+                        <!-- Status -->
+                        <div class="strip-status">
+                            <div class="status-dot inactive" id="rtlamrStripDot"></div>
+                            <span id="rtlamrStripStatus">STANDBY</span>
+                        </div>
+                        <div class="strip-time" id="rtlamrStripTime">--:--:-- UTC</div>
+                    </div>
+                </div>
+
                 <!-- Filter Bar Container (populated by JavaScript based on active mode) -->
                 <div id="filterBarContainer" style="display: none;"></div>
 
@@ -2044,6 +2430,8 @@
         let isSensorRunning = false;
         let isWifiRunning = false;
         let isBtRunning = false;
+        let isAprsRunning = false;
+        let isTscmRunning = false;
         let currentMode = 'pager';
         let msgCount = 0;
         let pocsagCount = 0;
@@ -2324,6 +2712,25 @@
             // Initialize dropdown nav active state
             updateDropdownActiveState();
 
+            // Global strip time updater - updates all visible function strips
+            setInterval(function() {
+                const now = new Date();
+                const utcStr = now.toUTCString().slice(17, 25) + ' UTC';
+
+                // Update all strip time elements
+                const stripTimeIds = [
+                    'pagerStripTime', 'sensorStripTime', 'rtlamrStripTime',
+                    'btStripTime', 'wifiStripTime', 'tscmStripTime', 'listeningStripTime'
+                ];
+                stripTimeIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = utcStr;
+                });
+            }, 1000);
+
+            // Check tool availability for all strip modes
+            checkStripToolStatus();
+
             // Handle mode parameter from URL (e.g., /?mode=aprs)
             const urlParams = new URLSearchParams(window.location.search);
             const modeParam = urlParams.get('mode');
@@ -2520,6 +2927,14 @@
             if (pagerTimelineContainer) pagerTimelineContainer.style.display = mode === 'pager' ? 'block' : 'none';
             if (sensorTimelineContainer) sensorTimelineContainer.style.display = mode === 'sensor' ? 'block' : 'none';
 
+            // Show/hide mode-specific function strips
+            const pagerStrip = document.getElementById('pagerStrip');
+            const sensorStrip = document.getElementById('sensorStrip');
+            const rtlamrStrip = document.getElementById('rtlamrStrip');
+            if (pagerStrip) pagerStrip.style.display = mode === 'pager' ? 'block' : 'none';
+            if (sensorStrip) sensorStrip.style.display = mode === 'sensor' ? 'block' : 'none';
+            if (rtlamrStrip) rtlamrStrip.style.display = mode === 'rtlamr' ? 'block' : 'none';
+
             // Update output panel title based on mode
             const titles = {
                 'pager': 'Pager Decoder',
@@ -2574,6 +2989,41 @@
             const rtlDeviceSection = document.getElementById('rtlDeviceSection');
             if (rtlDeviceSection) rtlDeviceSection.style.display = (mode === 'pager' || mode === 'sensor' || mode === 'rtlamr' || mode === 'listening' || mode === 'aprs' || mode === 'sstv') ? 'block' : 'none';
 
+            // Always restore all moved sections back to their containers first
+            const sidebar = document.getElementById('mainSidebar');
+            if (sidebar) {
+                // Restore Signal Source and SDR Device to expanded state
+                if (agentSection) agentSection.classList.remove('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.remove('collapsed');
+
+                // Helper function to restore sections to their mode container
+                function restoreSectionsToMode(modeId, selectors, titleMatch) {
+                    const modeEl = document.getElementById(modeId);
+                    if (!modeEl) return;
+                    const movedSections = sidebar.querySelectorAll(':scope > .section:not(#agentSection):not(#rtlDeviceSection)');
+                    movedSections.forEach(section => {
+                        const matchesSelector = selectors.some(sel => section.querySelector(sel));
+                        const matchesTitle = titleMatch && section.querySelector('h3')?.textContent?.includes(titleMatch);
+                        if (matchesSelector || matchesTitle) {
+                            modeEl.appendChild(section);
+                        }
+                    });
+                }
+
+                // Restore all mode sections to their containers
+                restoreSectionsToMode('listeningPostMode', ['#lpQuickStatus', '#bookmarkFreqInput', '#sidebarRecentSignals'], 'Spectrum Analyzer');
+                restoreSectionsToMode('pagerMode', ['#proto_pocsag512', '#squelch', '#loggingEnabled', '#filterToneOnly'], 'Pager Decoding');
+                restoreSectionsToMode('sensorMode', ['#sensorPpm', '#sensorLogging'], '433MHz Sensors');
+                restoreSectionsToMode('rtlamrMode', ['#rtlamrPpm', '#rtlamrUnique', '#rtlamrLogging'], 'Utility Meter');
+                restoreSectionsToMode('aprsMode', [], 'APRS Tracking');
+                restoreSectionsToMode('spystationsMode', ['#filterTypeNumber', '#countryFilters', '#modeFilters', '#spyStatsNumber'], 'Spy Stations');
+                restoreSectionsToMode('wifiMode', ['#wifiScanModeQuick', '#monitorStartBtn', '#wifiChannel', '#watchMacInput', '#targetBssid'], 'WiFi Scanning');
+                restoreSectionsToMode('bluetoothMode', ['#btAdapterSelect', '#btTransport', '#btScanDuration'], 'Bluetooth Scanning');
+                restoreSectionsToMode('tscmMode', ['#tscmWifiEnabled', '#tscmVerboseResults', '#tscmBaselineName'], 'TSCM Sweep');
+                restoreSectionsToMode('satelliteMode', ['#satTrackingList', '#obsLat', '#obsLon'], 'Satellite Command');
+                restoreSectionsToMode('sstvMode', ['#sstvFrequency'], 'ISS SSTV Decoder');
+            }
+
             // Toggle mode-specific tool status displays
             const toolStatusPager = document.getElementById('toolStatusPager');
             const toolStatusSensor = document.getElementById('toolStatusSensor');
@@ -2603,9 +3053,46 @@
                 if (typeof WiFiMode !== 'undefined') {
                     WiFiMode.init();
                 }
+                // WiFi: move sections to top in order: WiFi Scanning, Signal Source, then rest
+                const wifiModeEl = document.getElementById('wifiMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (wifiModeEl && sidebar && agentSection) {
+                    const wifiSections = Array.from(wifiModeEl.querySelectorAll('.section'));
+                    // Insert in reverse order so they end up in correct order
+                    // First, move all wifi sections except first to top (in reverse)
+                    for (let i = wifiSections.length - 1; i >= 1; i--) {
+                        sidebar.insertBefore(wifiSections[i], sidebar.firstChild);
+                        wifiSections[i].classList.add('collapsed');
+                    }
+                    // Then insert Signal Source
+                    sidebar.insertBefore(agentSection, sidebar.firstChild);
+                    agentSection.classList.add('collapsed');
+                    // Finally insert WiFi Scanning at the very top (expanded)
+                    if (wifiSections[0]) {
+                        sidebar.insertBefore(wifiSections[0], sidebar.firstChild);
+                        wifiSections[0].classList.remove('collapsed');
+                    }
+                }
             } else if (mode === 'bluetooth') {
                 refreshBtInterfaces();
                 initBtRadar();
+                // Bluetooth: move Bluetooth Scanning to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+
+                const btModeEl = document.getElementById('bluetoothMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (btModeEl && sidebar) {
+                    const btSections = btModeEl.querySelectorAll('.section');
+                    // Move bluetooth sections to top of sidebar (before agentSection)
+                    btSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Bluetooth Scanning expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             } else if (mode === 'aprs') {
                 checkAprsTools();
                 initAprsMap();
@@ -2613,16 +3100,159 @@
                 setTimeout(() => {
                     if (aprsMap) aprsMap.invalidateSize();
                 }, 100);
+                // APRS: move APRS Tracking to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const aprsModeEl = document.getElementById('aprsMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (aprsModeEl && sidebar) {
+                    const aprsSections = aprsModeEl.querySelectorAll('.section');
+                    // Move aprs sections to top of sidebar (before agentSection)
+                    aprsSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // APRS Tracking expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             } else if (mode === 'satellite') {
                 initPolarPlot();
                 initSatelliteList();
+                // Satellite: move Satellite Command to top, collapse others
+                const satelliteModeEl = document.getElementById('satelliteMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (satelliteModeEl && sidebar) {
+                    const satSections = satelliteModeEl.querySelectorAll('.section');
+                    // Move satellite sections to top of sidebar (before agentSection)
+                    satSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Satellite Command expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
+            } else if (mode === 'tscm') {
+                // TSCM: move TSCM Sweep to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+
+                const tscmModeEl = document.getElementById('tscmMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (tscmModeEl && sidebar) {
+                    const tscmSections = tscmModeEl.querySelectorAll('.section');
+                    // Move tscm sections to top of sidebar (before agentSection)
+                    tscmSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // TSCM Sweep expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             } else if (mode === 'listening') {
                 // Check for incoming tune requests from Spy Stations
                 if (typeof checkIncomingTuneRequest === 'function') {
                     checkIncomingTuneRequest();
                 }
+                // Listening Post: move Spectrum Analyzer to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const lpMode = document.getElementById('listeningPostMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (lpMode && sidebar) {
+                    const lpSections = lpMode.querySelectorAll('.section');
+                    // Move listening post sections to top of sidebar (before agentSection)
+                    lpSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Spectrum Analyzer expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
+            } else if (mode === 'pager') {
+                // Pager: move Pager Decoding to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const pagerModeEl = document.getElementById('pagerMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (pagerModeEl && sidebar) {
+                    const pagerSections = pagerModeEl.querySelectorAll('.section');
+                    // Move pager sections to top of sidebar (before agentSection)
+                    pagerSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Pager Decoding expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
+            } else if (mode === 'sensor') {
+                // Sensor: move 433MHz Sensors to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const sensorModeEl = document.getElementById('sensorMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (sensorModeEl && sidebar) {
+                    const sensorSections = sensorModeEl.querySelectorAll('.section');
+                    // Move sensor sections to top of sidebar (before agentSection)
+                    sensorSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // 433MHz Sensors expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
+            } else if (mode === 'rtlamr') {
+                // RTLAMR: move Utility Meter Reading to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const rtlamrModeEl = document.getElementById('rtlamrMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (rtlamrModeEl && sidebar) {
+                    const rtlamrSections = rtlamrModeEl.querySelectorAll('.section');
+                    // Move rtlamr sections to top of sidebar (before agentSection)
+                    rtlamrSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Utility Meter Reading expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             } else if (mode === 'spystations') {
                 SpyStations.init();
+                // Spy Stations: move Spy Stations to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+
+                const spystationsModeEl = document.getElementById('spystationsMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (spystationsModeEl && sidebar) {
+                    const spySections = spystationsModeEl.querySelectorAll('.section');
+                    // Move spy stations sections to top of sidebar (before agentSection)
+                    spySections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // Spy Stations expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             } else if (mode === 'meshtastic') {
                 Meshtastic.init();
                 // Fix map sizing after container becomes visible
@@ -2631,6 +3261,24 @@
                 }, 100);
             } else if (mode === 'sstv') {
                 SSTV.init();
+                // SSTV: move ISS SSTV Decoder to top, collapse others
+                if (agentSection) agentSection.classList.add('collapsed');
+                if (rtlDeviceSection) rtlDeviceSection.classList.add('collapsed');
+
+                const sstvModeEl = document.getElementById('sstvMode');
+                const sidebar = document.getElementById('mainSidebar');
+                if (sstvModeEl && sidebar) {
+                    const sstvSections = sstvModeEl.querySelectorAll('.section');
+                    // Move sstv sections to top of sidebar (before agentSection)
+                    sstvSections.forEach((section, idx) => {
+                        sidebar.insertBefore(section, agentSection);
+                        if (idx === 0) {
+                            section.classList.remove('collapsed'); // ISS SSTV Decoder expanded
+                        } else {
+                            section.classList.add('collapsed'); // Others collapsed
+                        }
+                    });
+                }
             }
         }
 
@@ -2845,10 +3493,68 @@
 
         function setSensorRunning(running) {
             isSensorRunning = running;
-            document.getElementById('statusDot').classList.toggle('running', running);
-            document.getElementById('statusText').textContent = running ? 'Listening...' : 'Idle';
-            document.getElementById('startSensorBtn').style.display = running ? 'none' : 'block';
-            document.getElementById('stopSensorBtn').style.display = running ? 'block' : 'none';
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startSensorBtn = document.getElementById('startSensorBtn');
+            const stopSensorBtn = document.getElementById('stopSensorBtn');
+
+            if (statusDot) statusDot.classList.toggle('running', running);
+            if (statusText) statusText.textContent = running ? 'Listening...' : 'Idle';
+            if (startSensorBtn) startSensorBtn.style.display = running ? 'none' : 'block';
+            if (stopSensorBtn) stopSensorBtn.style.display = running ? 'block' : 'none';
+
+            // Update sensor strip
+            const sensorStripDot = document.getElementById('sensorStripDot');
+            const sensorStripStatus = document.getElementById('sensorStripStatus');
+            const sensorStripStartBtn = document.getElementById('sensorStripStartBtn');
+            const sensorStripStopBtn = document.getElementById('sensorStripStopBtn');
+            const sensorStripPreset = document.getElementById('sensorStripPreset');
+            const sensorStripGain = document.getElementById('sensorStripGain');
+
+            if (sensorStripDot) sensorStripDot.className = 'status-dot ' + (running ? 'listening' : 'inactive');
+            if (sensorStripStatus) {
+                sensorStripStatus.textContent = running ? 'LISTENING' : 'STANDBY';
+                sensorStripStatus.style.color = running ? 'var(--accent-green)' : '';
+            }
+            if (sensorStripStartBtn) sensorStripStartBtn.style.display = running ? 'none' : 'inline-block';
+            if (sensorStripStopBtn) sensorStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (sensorStripPreset) sensorStripPreset.disabled = running;
+            if (sensorStripGain) sensorStripGain.disabled = running;
+        }
+
+        // Sensor strip functions
+        function sensorPresetChanged() {
+            const preset = document.getElementById('sensorStripPreset').value;
+            const customControl = document.getElementById('sensorStripCustomFreqControl');
+            if (preset === 'custom') {
+                customControl.style.display = 'flex';
+            } else {
+                customControl.style.display = 'none';
+                document.getElementById('sensorFrequency').value = preset;
+                document.getElementById('sensorStripFreq').textContent = preset;
+            }
+        }
+
+        function startSensorDecodingFromStrip() {
+            // Sync values from strip to hidden inputs
+            const preset = document.getElementById('sensorStripPreset').value;
+            const freq = preset === 'custom' ?
+                document.getElementById('sensorStripCustomFreq').value :
+                preset;
+            const gain = document.getElementById('sensorStripGain').value;
+
+            document.getElementById('sensorFrequency').value = freq;
+            document.getElementById('sensorGain').value = gain;
+            document.getElementById('sensorStripFreq').textContent = freq;
+
+            startSensorDecoding();
+        }
+
+        function updateSensorStrip(sensorCount, readingCount) {
+            const sensorsEl = document.getElementById('sensorStripSensors');
+            const readingsEl = document.getElementById('sensorStripReadings');
+            if (sensorsEl) sensorsEl.textContent = sensorCount;
+            if (readingsEl) readingsEl.textContent = readingCount;
         }
 
         function startSensorStream() {
@@ -3088,18 +3794,81 @@
 
         function setRtlamrRunning(running) {
             isRtlamrRunning = running;
-            document.getElementById('statusDot').classList.toggle('running', running);
-            document.getElementById('statusText').textContent = running ? 'Listening...' : 'Idle';
-            document.getElementById('startRtlamrBtn').style.display = running ? 'none' : 'block';
-            document.getElementById('stopRtlamrBtn').style.display = running ? 'block' : 'none';
-            
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startRtlamrBtn = document.getElementById('startRtlamrBtn');
+            const stopRtlamrBtn = document.getElementById('stopRtlamrBtn');
+            const activeModeIndicator = document.getElementById('activeModeIndicator');
+            const rtlamrFrequency = document.getElementById('rtlamrFrequency');
+
+            if (statusDot) statusDot.classList.toggle('running', running);
+            if (statusText) statusText.textContent = running ? 'Listening...' : 'Idle';
+            if (startRtlamrBtn) startRtlamrBtn.style.display = running ? 'none' : 'block';
+            if (stopRtlamrBtn) stopRtlamrBtn.style.display = running ? 'block' : 'none';
+
             // Update mode indicator with frequency
-            if (running) {
-                const freq = document.getElementById('rtlamrFrequency').value;
-                document.getElementById('activeModeIndicator').innerHTML = '<span class="pulse-dot"></span>METERS @ ' + freq + ' MHz';
-            } else {
-                document.getElementById('activeModeIndicator').innerHTML = '<span class="pulse-dot"></span>METERS';
+            if (activeModeIndicator) {
+                if (running && rtlamrFrequency) {
+                    activeModeIndicator.innerHTML = '<span class="pulse-dot"></span>METERS @ ' + rtlamrFrequency.value + ' MHz';
+                } else {
+                    activeModeIndicator.innerHTML = '<span class="pulse-dot"></span>METERS';
+                }
             }
+
+            // Update RTLAMR strip
+            const rtlamrStripDot = document.getElementById('rtlamrStripDot');
+            const rtlamrStripStatus = document.getElementById('rtlamrStripStatus');
+            const rtlamrStripStartBtn = document.getElementById('rtlamrStripStartBtn');
+            const rtlamrStripStopBtn = document.getElementById('rtlamrStripStopBtn');
+            const rtlamrStripPreset = document.getElementById('rtlamrStripPreset');
+            const rtlamrStripGain = document.getElementById('rtlamrStripGain');
+
+            if (rtlamrStripDot) rtlamrStripDot.className = 'status-dot ' + (running ? 'listening' : 'inactive');
+            if (rtlamrStripStatus) {
+                rtlamrStripStatus.textContent = running ? 'LISTENING' : 'STANDBY';
+                rtlamrStripStatus.style.color = running ? 'var(--accent-purple, #af52de)' : '';
+            }
+            if (rtlamrStripStartBtn) rtlamrStripStartBtn.style.display = running ? 'none' : 'inline-block';
+            if (rtlamrStripStopBtn) rtlamrStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (rtlamrStripPreset) rtlamrStripPreset.disabled = running;
+            if (rtlamrStripGain) rtlamrStripGain.disabled = running;
+        }
+
+        // RTLAMR strip functions
+        function rtlamrPresetChanged() {
+            const preset = document.getElementById('rtlamrStripPreset').value;
+            const customControl = document.getElementById('rtlamrStripCustomFreqControl');
+            if (preset === 'custom') {
+                customControl.style.display = 'flex';
+            } else {
+                customControl.style.display = 'none';
+                document.getElementById('rtlamrFrequency').value = preset;
+                document.getElementById('rtlamrStripFreq').textContent = preset;
+            }
+        }
+
+        function startRtlamrDecodingFromStrip() {
+            // Sync values from strip to hidden inputs
+            const preset = document.getElementById('rtlamrStripPreset').value;
+            const freq = preset === 'custom' ?
+                document.getElementById('rtlamrStripCustomFreq').value :
+                preset;
+            const gain = document.getElementById('rtlamrStripGain').value;
+            const msgType = document.getElementById('rtlamrStripMsgType').value;
+
+            document.getElementById('rtlamrFrequency').value = freq;
+            document.getElementById('rtlamrGain').value = gain;
+            document.getElementById('rtlamrMsgType').value = msgType;
+            document.getElementById('rtlamrStripFreq').textContent = freq;
+
+            startRtlamrDecoding();
+        }
+
+        function updateRtlamrStrip(meterCount, readingCount) {
+            const metersEl = document.getElementById('rtlamrStripMeters');
+            const readingsEl = document.getElementById('rtlamrStripReadings');
+            if (metersEl) metersEl.textContent = meterCount;
+            if (readingsEl) readingsEl.textContent = readingCount;
         }
 
         function startRtlamrStream(isAgentMode = false) {
@@ -3399,6 +4168,7 @@
         function renderPresets() {
             const presets = loadPresets();
             const container = document.getElementById('presetButtons');
+            if (!container) return; // Preset buttons not in UI
             container.innerHTML = presets.map(freq =>
                 `<button class="preset-btn" onclick="setFreq('${freq}')" oncontextmenu="removePreset('${freq}'); return false;" title="Right-click to remove">${freq}</button>`
             ).join('');
@@ -3406,6 +4176,7 @@
 
         function addPreset() {
             const input = document.getElementById('newPresetFreq');
+            if (!input) return; // Preset UI not present
             const freq = input.value.trim();
             if (!freq || isNaN(parseFloat(freq))) {
                 alert('Please enter a valid frequency');
@@ -3850,10 +4621,70 @@
 
         function setRunning(running) {
             isRunning = running;
-            document.getElementById('statusDot').classList.toggle('running', running);
-            document.getElementById('statusText').textContent = running ? 'Decoding...' : 'Idle';
-            document.getElementById('startBtn').style.display = running ? 'none' : 'block';
-            document.getElementById('stopBtn').style.display = running ? 'block' : 'none';
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+
+            if (statusDot) statusDot.classList.toggle('running', running);
+            if (statusText) statusText.textContent = running ? 'Decoding...' : 'Idle';
+            if (startBtn) startBtn.style.display = running ? 'none' : 'block';
+            if (stopBtn) stopBtn.style.display = running ? 'block' : 'none';
+
+            // Update pager strip
+            const pagerStripDot = document.getElementById('pagerStripDot');
+            const pagerStripStatus = document.getElementById('pagerStripStatus');
+            const pagerStripStartBtn = document.getElementById('pagerStripStartBtn');
+            const pagerStripStopBtn = document.getElementById('pagerStripStopBtn');
+            const pagerStripPreset = document.getElementById('pagerStripPreset');
+            const pagerStripGain = document.getElementById('pagerStripGain');
+
+            if (pagerStripDot) pagerStripDot.className = 'status-dot ' + (running ? 'decoding' : 'inactive');
+            if (pagerStripStatus) {
+                pagerStripStatus.textContent = running ? 'DECODING' : 'STANDBY';
+                pagerStripStatus.style.color = running ? 'var(--accent-cyan)' : '';
+            }
+            if (pagerStripStartBtn) pagerStripStartBtn.style.display = running ? 'none' : 'inline-block';
+            if (pagerStripStopBtn) pagerStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (pagerStripPreset) pagerStripPreset.disabled = running;
+            if (pagerStripGain) pagerStripGain.disabled = running;
+        }
+
+        // Pager strip functions
+        function pagerPresetChanged() {
+            const preset = document.getElementById('pagerStripPreset').value;
+            const customControl = document.getElementById('pagerStripCustomFreqControl');
+            if (preset === 'custom') {
+                customControl.style.display = 'flex';
+            } else {
+                customControl.style.display = 'none';
+                document.getElementById('frequency').value = preset;
+                document.getElementById('pagerStripFreq').textContent = preset;
+            }
+        }
+
+        function startDecodingFromStrip() {
+            // Sync values from strip to hidden inputs
+            const preset = document.getElementById('pagerStripPreset').value;
+            const freq = preset === 'custom' ?
+                document.getElementById('pagerStripCustomFreq').value :
+                preset;
+            const gain = document.getElementById('pagerStripGain').value;
+
+            document.getElementById('frequency').value = freq;
+            document.getElementById('gain').value = gain;
+            document.getElementById('pagerStripFreq').textContent = freq;
+
+            startDecoding();
+        }
+
+        function updatePagerStrip(messageCount, pocsagCount, flexCount) {
+            const msgEl = document.getElementById('pagerStripMessages');
+            const pocsagEl = document.getElementById('pagerStripPocsag');
+            const flexEl = document.getElementById('pagerStripFlex');
+            if (msgEl) msgEl.textContent = messageCount;
+            if (pocsagEl) pocsagEl.textContent = pocsagCount;
+            if (flexEl) flexEl.textContent = flexCount;
         }
 
         function startStream(isAgentMode = false) {
@@ -5581,10 +6412,60 @@
 
         function setWifiRunning(running) {
             isWifiRunning = running;
-            document.getElementById('statusDot').classList.toggle('running', running);
-            document.getElementById('statusText').textContent = running ? 'Scanning...' : 'Idle';
-            document.getElementById('startWifiBtn').style.display = running ? 'none' : 'block';
-            document.getElementById('stopWifiBtn').style.display = running ? 'block' : 'none';
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startWifiBtn = document.getElementById('startWifiBtn');
+            const stopWifiBtn = document.getElementById('stopWifiBtn');
+
+            if (statusDot) statusDot.classList.toggle('running', running);
+            if (statusText) statusText.textContent = running ? 'Scanning...' : 'Idle';
+            if (startWifiBtn) startWifiBtn.style.display = running ? 'none' : 'block';
+            if (stopWifiBtn) stopWifiBtn.style.display = running ? 'block' : 'none';
+
+            // Update WiFi strip
+            const wifiStripDot = document.getElementById('wifiStripDot');
+            const wifiStripStatus = document.getElementById('wifiStripStatus');
+            const wifiStripQuickBtn = document.getElementById('wifiStripQuickBtn');
+            const wifiStripDeepBtn = document.getElementById('wifiStripDeepBtn');
+            const wifiStripStopBtn = document.getElementById('wifiStripStopBtn');
+            const wifiStripInterface = document.getElementById('wifiStripInterface');
+            const wifiStripBand = document.getElementById('wifiStripBand');
+
+            if (wifiStripDot) wifiStripDot.className = 'status-dot ' + (running ? 'scanning' : 'inactive');
+            if (wifiStripStatus) {
+                wifiStripStatus.textContent = running ? 'SCANNING' : 'STANDBY';
+                wifiStripStatus.style.color = running ? 'var(--accent-orange)' : '';
+            }
+            if (wifiStripQuickBtn) wifiStripQuickBtn.style.display = running ? 'none' : 'inline-block';
+            if (wifiStripDeepBtn) wifiStripDeepBtn.style.display = running ? 'none' : 'inline-block';
+            if (wifiStripStopBtn) wifiStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (wifiStripInterface) wifiStripInterface.disabled = running;
+            if (wifiStripBand) wifiStripBand.disabled = running;
+        }
+
+        // WiFi strip functions
+        function updateWifiStrip(apCount, clientCount, hiddenCount) {
+            const apsEl = document.getElementById('wifiStripAPs');
+            const clientsEl = document.getElementById('wifiStripClients');
+            const hiddenEl = document.getElementById('wifiStripHidden');
+
+            if (apsEl) apsEl.textContent = apCount;
+            if (clientsEl) clientsEl.textContent = clientCount;
+            if (hiddenEl) hiddenEl.textContent = hiddenCount;
+        }
+
+        // Sync WiFi strip interface dropdown
+        function syncWifiStripInterfaces(interfaces) {
+            const stripSelect = document.getElementById('wifiStripInterface');
+            if (!stripSelect) return;
+
+            stripSelect.innerHTML = '<option value="">Interface...</option>';
+            interfaces.forEach(iface => {
+                const opt = document.createElement('option');
+                opt.value = iface.name || iface;
+                opt.textContent = iface.name || iface;
+                stripSelect.appendChild(opt);
+            });
         }
 
         // Batching state for WiFi updates
@@ -6859,10 +7740,84 @@
 
         function setBtRunning(running) {
             isBtRunning = running;
-            document.getElementById('statusDot').classList.toggle('running', running);
-            document.getElementById('statusText').textContent = running ? 'Scanning...' : 'Idle';
-            document.getElementById('startBtBtn').style.display = running ? 'none' : 'block';
-            document.getElementById('stopBtBtn').style.display = running ? 'block' : 'none';
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const startBtBtn = document.getElementById('startBtBtn');
+            const stopBtBtn = document.getElementById('stopBtBtn');
+
+            if (statusDot) statusDot.classList.toggle('running', running);
+            if (statusText) statusText.textContent = running ? 'Scanning...' : 'Idle';
+            if (startBtBtn) startBtBtn.style.display = running ? 'none' : 'block';
+            if (stopBtBtn) stopBtBtn.style.display = running ? 'block' : 'none';
+
+            // Update Bluetooth strip
+            const btStripDot = document.getElementById('btStripDot');
+            const btStripStatus = document.getElementById('btStripStatus');
+            const btStripStartBtn = document.getElementById('btStripStartBtn');
+            const btStripStopBtn = document.getElementById('btStripStopBtn');
+            const btStripAdapter = document.getElementById('btStripAdapter');
+            const btStripTransport = document.getElementById('btStripTransport');
+
+            if (btStripDot) btStripDot.className = 'status-dot ' + (running ? 'scanning' : 'inactive');
+            if (btStripStatus) {
+                btStripStatus.textContent = running ? 'SCANNING' : 'STANDBY';
+                btStripStatus.style.color = running ? '#0a84ff' : '';
+            }
+            if (btStripStartBtn) btStripStartBtn.style.display = running ? 'none' : 'inline-block';
+            if (btStripStopBtn) btStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (btStripAdapter) btStripAdapter.disabled = running;
+            if (btStripTransport) btStripTransport.disabled = running;
+        }
+
+        // Bluetooth strip functions
+        function btStartScanFromStrip() {
+            // Sync values from strip to hidden inputs
+            const adapter = document.getElementById('btStripAdapter').value;
+            const transport = document.getElementById('btStripTransport').value;
+
+            const adapterSelect = document.getElementById('btAdapterSelect');
+            const transportSelect = document.getElementById('btTransport');
+            if (adapterSelect) adapterSelect.value = adapter;
+            if (transportSelect) transportSelect.value = transport;
+
+            btStartScan();
+        }
+
+        function updateBtStrip(deviceCount, trackerCount, strongestRssi) {
+            const devicesEl = document.getElementById('btStripDevices');
+            const trackersEl = document.getElementById('btStripTrackers');
+            const rssiEl = document.getElementById('btStripRssi');
+            const rssiStat = document.getElementById('btStripRssiStat');
+
+            if (devicesEl) devicesEl.textContent = deviceCount;
+            if (trackersEl) trackersEl.textContent = trackerCount;
+            if (rssiEl) rssiEl.textContent = strongestRssi !== null ? strongestRssi : '--';
+
+            // Color code RSSI stat
+            if (rssiStat && strongestRssi !== null) {
+                rssiStat.classList.remove('good', 'warning', 'poor');
+                if (strongestRssi >= -50) {
+                    rssiStat.classList.add('good');
+                } else if (strongestRssi >= -70) {
+                    rssiStat.classList.add('warning');
+                } else {
+                    rssiStat.classList.add('poor');
+                }
+            }
+        }
+
+        // Sync Bluetooth strip adapter dropdown when adapters are detected
+        function syncBtStripAdapters(adapters) {
+            const stripSelect = document.getElementById('btStripAdapter');
+            if (!stripSelect) return;
+
+            stripSelect.innerHTML = '';
+            adapters.forEach((adapter, idx) => {
+                const opt = document.createElement('option');
+                opt.value = adapter.path || adapter.id || idx;
+                opt.textContent = adapter.name || adapter.address || `Adapter ${idx}`;
+                stripSelect.appendChild(opt);
+            });
         }
 
         // Batching state for Bluetooth updates
@@ -7595,7 +8550,6 @@
         let aprsMap = null;
         let aprsMarkers = {};
         let aprsEventSource = null;
-        let isAprsRunning = false;
         let aprsPacketCount = 0;
         let aprsStationCount = 0;
         let aprsMeterLastUpdate = 0;
@@ -7706,6 +8660,64 @@
                         multimonEl.title = 'multimon-ng: Error';
                     }
                 });
+        }
+
+        // Check tool availability for all function strips
+        // Uses template data for pager/sensor/rtlamr, API calls only for endpoints that exist
+        function checkStripToolStatus() {
+            // Pager tools - use template data (no API call needed)
+            const pagerRtl = document.getElementById('pagerStripRtl');
+            const pagerMm = document.getElementById('pagerStripMm');
+            if (pagerRtl) {
+                pagerRtl.className = 'strip-tool' + ({{ 'true' if tools.rtl_fm else 'false' }} ? ' ok' : '');
+                pagerRtl.title = 'rtl_fm: ' + ({{ 'true' if tools.rtl_fm else 'false' }} ? 'OK' : 'Missing');
+            }
+            if (pagerMm) {
+                pagerMm.className = 'strip-tool' + ({{ 'true' if tools.multimon else 'false' }} ? ' ok' : '');
+                pagerMm.title = 'multimon-ng: ' + ({{ 'true' if tools.multimon else 'false' }} ? 'OK' : 'Missing');
+            }
+
+            // Sensor tools - use template data
+            const sensorRtl = document.getElementById('sensorStripRtl');
+            if (sensorRtl) {
+                sensorRtl.className = 'strip-tool' + ({{ 'true' if tools.rtl_433 else 'false' }} ? ' ok' : '');
+                sensorRtl.title = 'rtl_433: ' + ({{ 'true' if tools.rtl_433 else 'false' }} ? 'OK' : 'Missing');
+            }
+
+            // RTLAMR tools - use template data
+            const rtlamrRtl = document.getElementById('rtlamrStripRtl');
+            if (rtlamrRtl) {
+                rtlamrRtl.className = 'strip-tool' + ({{ 'true' if tools.rtl_fm else 'false' }} ? ' ok' : '');
+                rtlamrRtl.title = 'rtl_tcp: ' + ({{ 'true' if tools.rtl_fm else 'false' }} ? 'OK' : 'Missing');
+            }
+
+            // Bluetooth - check capabilities via existing API
+            fetch('/bluetooth/capabilities')
+                .then(r => r.json())
+                .then(data => {
+                    const bleEl = document.getElementById('btStripBleak');
+                    if (bleEl) {
+                        const hasBackend = data.has_bleak || data.has_bluez || data.available;
+                        bleEl.className = 'strip-tool' + (hasBackend ? ' ok' : '');
+                        bleEl.title = 'BLE: ' + (hasBackend ? 'OK' : 'No backend');
+                    }
+                })
+                .catch(() => {});
+
+            // Listening Post SDR - check via listening tools API
+            fetch('/listening/tools')
+                .then(r => r.json())
+                .then(data => {
+                    const sdrEl = document.getElementById('listeningStripSdr');
+                    if (sdrEl) {
+                        sdrEl.className = 'strip-tool' + (data.rtl_fm ? ' ok' : '');
+                        sdrEl.title = 'SDR: ' + (data.rtl_fm ? 'OK' : 'Not detected');
+                    }
+                })
+                .catch(() => {});
+
+            // Check APRS tools (this endpoint exists)
+            checkAprsTools();
         }
 
         function initAprsMap() {
@@ -9197,7 +10209,6 @@
         // ============================================
         // TSCM (Counter-Surveillance) Functions
         // ============================================
-        let isTscmRunning = false;
         let tscmEventSource = null;
         let tscmThreats = [];
         let tscmWifiDevices = [];
@@ -9400,6 +10411,7 @@
                     document.getElementById('startTscmBtn').style.display = 'none';
                     document.getElementById('stopTscmBtn').style.display = 'block';
                     document.getElementById('tscmProgress').style.display = 'flex';
+                    updateTscmStripRunning(true);
 
                     // Clear and reset the signal timeline for new sweep
                     SignalTimeline.clear();
@@ -9495,10 +10507,68 @@
             document.getElementById('startTscmBtn').style.display = 'block';
             document.getElementById('stopTscmBtn').style.display = 'none';
             document.getElementById('tscmProgress').style.display = 'none';
+            updateTscmStripRunning(false);
 
             // Show report button if we have any data
             const hasData = tscmWifiDevices.length > 0 || tscmBtDevices.length > 0 || tscmRfSignals.length > 0;
             document.getElementById('tscmReportBtn').style.display = hasData ? 'block' : 'none';
+        }
+
+        // TSCM strip functions
+        function updateTscmStripRunning(running) {
+            const tscmStripDot = document.getElementById('tscmStripDot');
+            const tscmStripStatus = document.getElementById('tscmStripStatus');
+            const tscmStripStartBtn = document.getElementById('tscmStripStartBtn');
+            const tscmStripStopBtn = document.getElementById('tscmStripStopBtn');
+            const tscmStripSweepType = document.getElementById('tscmStripSweepType');
+            const tscmStripBaseline = document.getElementById('tscmStripBaseline');
+
+            if (tscmStripDot) tscmStripDot.className = 'status-dot ' + (running ? 'sweeping' : 'inactive');
+            if (tscmStripStatus) {
+                tscmStripStatus.textContent = running ? 'SWEEPING' : 'STANDBY';
+                tscmStripStatus.style.color = running ? 'var(--accent-orange)' : '';
+            }
+            if (tscmStripStartBtn) tscmStripStartBtn.style.display = running ? 'none' : 'inline-block';
+            if (tscmStripStopBtn) tscmStripStopBtn.style.display = running ? 'inline-block' : 'none';
+            if (tscmStripSweepType) tscmStripSweepType.disabled = running;
+            if (tscmStripBaseline) tscmStripBaseline.disabled = running;
+        }
+
+        function startTscmSweepFromStrip() {
+            // Sync values from strip to hidden selects
+            const sweepType = document.getElementById('tscmStripSweepType').value;
+            const baseline = document.getElementById('tscmStripBaseline').value;
+
+            const sweepTypeSelect = document.getElementById('tscmSweepType');
+            const baselineSelect = document.getElementById('tscmBaselineSelect');
+            if (sweepTypeSelect) sweepTypeSelect.value = sweepType;
+            if (baselineSelect) baselineSelect.value = baseline;
+
+            startTscmSweep();
+        }
+
+        function updateTscmStrip(threatCount, reviewCount, infoCount) {
+            const threatsEl = document.getElementById('tscmStripThreats');
+            const reviewEl = document.getElementById('tscmStripReview');
+            const infoEl = document.getElementById('tscmStripInfo');
+
+            if (threatsEl) threatsEl.textContent = threatCount;
+            if (reviewEl) reviewEl.textContent = reviewCount;
+            if (infoEl) infoEl.textContent = infoCount;
+        }
+
+        // Sync TSCM strip baseline dropdown when baselines are loaded
+        function syncTscmStripBaselines(baselines) {
+            const stripSelect = document.getElementById('tscmStripBaseline');
+            if (!stripSelect) return;
+
+            stripSelect.innerHTML = '<option value="">No Baseline</option>';
+            baselines.forEach(baseline => {
+                const opt = document.createElement('option');
+                opt.value = baseline.id || baseline.name;
+                opt.textContent = baseline.name;
+                stripSelect.appendChild(opt);
+            });
         }
 
         function generateTscmReport() {

@@ -1,39 +1,31 @@
 <!-- WiFi MODE -->
                 <div id="wifiMode" class="mode-content">
-                    <!-- Scan Mode Tabs -->
-                    <div class="section" style="padding: 8px;">
-                        <div class="wifi-scan-mode-tabs" style="display: flex; gap: 4px;">
-                            <button id="wifiScanModeQuick" class="wifi-mode-tab active" style="flex: 1; padding: 8px; font-size: 11px; background: var(--accent-green); color: #000; border: none; border-radius: 4px; cursor: pointer;">
-                                Quick Scan
-                            </button>
-                            <button id="wifiScanModeDeep" class="wifi-mode-tab" style="flex: 1; padding: 8px; font-size: 11px; background: var(--bg-tertiary); color: #888; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer;">
-                                Deep Scan
-                            </button>
-                        </div>
-                        <div id="wifiCapabilityStatus" class="info-text" style="margin-top: 8px; font-size: 10px;"></div>
-                        <!-- Show All Agents option (visible when agents are available) -->
-                        <div id="wifiShowAllAgentsContainer" style="margin-top: 8px; display: none;">
-                            <label class="inline-checkbox" style="font-size: 10px;">
-                                <input type="checkbox" id="wifiShowAllAgents" onchange="if(typeof WiFiMode !== 'undefined') WiFiMode.toggleShowAllAgents(this.checked)">
-                                Show networks from all agents
-                            </label>
-                        </div>
-                    </div>
-
                     <div class="section">
-                        <h3>WiFi Adapter</h3>
-                        <div class="form-group">
-                            <label>Select Device</label>
-                            <select id="wifiInterfaceSelect" style="font-size: 12px;">
-                                <option value="">Detecting interfaces...</option>
-                            </select>
+                        <h3>WiFi Scanning</h3>
+                        <p style="color: var(--text-secondary); font-size: 11px; line-height: 1.5; margin-bottom: 15px;">
+                            Scan for nearby WiFi networks, analyze channels, and monitor wireless activity.
+                        </p>
+                        <div style="background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: 4px; padding: 8px; font-size: 10px;">
+                            <span style="color: var(--accent-cyan);">Controls in function bar above</span>
                         </div>
-                        <button class="preset-btn" onclick="refreshWifiInterfaces()" style="width: 100%;">
-                            <span class="icon icon--sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span> Refresh Devices
-                        </button>
-                        <div class="info-text" style="margin-top: 8px; display: grid; grid-template-columns: auto auto; gap: 4px 8px; align-items: center;" id="wifiToolStatus">
-                            <span>airmon-ng:</span><span class="tool-status missing">Checking...</span>
-                            <span>airodump-ng:</span><span class="tool-status missing">Checking...</span>
+                        <!-- Scan Mode Tabs -->
+                        <div style="margin-top: 12px;">
+                            <div class="wifi-scan-mode-tabs" style="display: flex; gap: 4px;">
+                                <button id="wifiScanModeQuick" class="wifi-mode-tab active" style="flex: 1; padding: 8px; font-size: 11px; background: var(--accent-green); color: #000; border: none; border-radius: 4px; cursor: pointer;">
+                                    Quick Scan
+                                </button>
+                                <button id="wifiScanModeDeep" class="wifi-mode-tab" style="flex: 1; padding: 8px; font-size: 11px; background: var(--bg-tertiary); color: #888; border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer;">
+                                    Deep Scan
+                                </button>
+                            </div>
+                            <div id="wifiCapabilityStatus" class="info-text" style="margin-top: 8px; font-size: 10px;"></div>
+                            <!-- Show All Agents option (visible when agents are available) -->
+                            <div id="wifiShowAllAgentsContainer" style="margin-top: 8px; display: none;">
+                                <label class="inline-checkbox" style="font-size: 10px;">
+                                    <input type="checkbox" id="wifiShowAllAgents" onchange="if(typeof WiFiMode !== 'undefined') WiFiMode.toggleShowAllAgents(this.checked)">
+                                    Show networks from all agents
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -61,31 +53,9 @@
                     <div class="section">
                         <h3>Scan Settings</h3>
                         <div class="form-group">
-                            <label>Band</label>
-                            <select id="wifiBand">
-                                <option value="abg">All (2.4 + 5 GHz)</option>
-                                <option value="bg">2.4 GHz only</option>
-                                <option value="a">5 GHz only</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
                             <label>Channel (empty = hop)</label>
                             <input type="text" id="wifiChannel" placeholder="e.g., 6 or 36">
                         </div>
-                    </div>
-
-                    <div class="section">
-                        <h3>Proximity Alerts</h3>
-                        <div class="info-text" style="margin-bottom: 8px;">
-                            Alert when specific MAC addresses appear
-                        </div>
-                        <div class="form-group">
-                            <input type="text" id="watchMacInput" placeholder="AA:BB:CC:DD:EE:FF">
-                        </div>
-                        <button class="preset-btn" onclick="addWatchMac()" style="width: 100%; margin-bottom: 8px;">
-                            Add to Watch List
-                        </button>
-                        <div id="watchList" style="max-height: 80px; overflow-y: auto; font-size: 10px; color: var(--text-dim);"></div>
                     </div>
 
                     <div class="section">
@@ -108,6 +78,20 @@
                         <button class="preset-btn" onclick="sendDeauth()" style="width: 100%; border-color: var(--accent-red); color: var(--accent-red);">
                             Send Deauth
                         </button>
+                    </div>
+
+                    <div class="section">
+                        <h3>Proximity Alerts</h3>
+                        <div class="info-text" style="margin-bottom: 8px;">
+                            Alert when specific MAC addresses appear
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="watchMacInput" placeholder="AA:BB:CC:DD:EE:FF">
+                        </div>
+                        <button class="preset-btn" onclick="addWatchMac()" style="width: 100%; margin-bottom: 8px;">
+                            Add to Watch List
+                        </button>
+                        <div id="watchList" style="max-height: 80px; overflow-y: auto; font-size: 10px; color: var(--text-dim);"></div>
                     </div>
 
                     <!-- Handshake Capture Status Panel -->
@@ -153,29 +137,7 @@
                         </div>
                     </div>
 
-                    <!-- v2 Scan Buttons -->
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <button class="run-btn" id="wifiQuickScanBtn" onclick="WiFiMode.startQuickScan()" style="flex: 1;">
-                            Quick Scan
-                        </button>
-                        <button class="run-btn" id="wifiDeepScanBtn" onclick="WiFiMode.startDeepScan()" style="flex: 1; background: var(--accent-orange);">
-                            Deep Scan
-                        </button>
-                    </div>
-                    <button class="stop-btn" id="wifiStopScanBtn" onclick="WiFiMode.stopScan()" style="display: none; width: 100%;">
-                        Stop Scanning
-                    </button>
-
-                    <!-- Legacy Scan Buttons (hidden, for backwards compatibility) -->
-                    <button class="run-btn" id="startWifiBtn" onclick="startWifiScan()" style="display: none;">
-                        Start Scanning (Legacy)
-                    </button>
-                    <button class="stop-btn" id="stopWifiBtn" onclick="stopWifiScan()" style="display: none;">
-                        Stop Scanning (Legacy)
-                    </button>
-
-                    <!-- Export Section -->
-                    <div class="section" style="margin-top: 10px;">
+                    <div class="section">
                         <h3>Export</h3>
                         <div style="display: flex; gap: 8px;">
                             <button class="preset-btn" onclick="WiFiMode.exportData('csv')" style="flex: 1;">
@@ -186,4 +148,14 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Hidden inputs for action bar sync -->
+                    <select id="wifiInterfaceSelect" style="display: none;">
+                        <option value="">Detecting interfaces...</option>
+                    </select>
+                    <select id="wifiBand" style="display: none;">
+                        <option value="abg">All (2.4 + 5 GHz)</option>
+                        <option value="bg">2.4 GHz only</option>
+                        <option value="a">5 GHz only</option>
+                    </select>
                 </div>

@@ -5991,13 +5991,15 @@ body::before {
     cursor: not-allowed;
 }
 
-.radio-action-btn.scan {
+.radio-action-btn.scan,
+.radio-action-btn.listen {
     background: var(--accent-green);
     border-color: var(--accent-green);
-    color: #000;
+    color: #fff;
 }
 
-.radio-action-btn.scan:hover:not(:disabled) {
+.radio-action-btn.scan:hover:not(:disabled),
+.radio-action-btn.listen:hover:not(:disabled) {
     box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
 
