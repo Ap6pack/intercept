@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIRCRAFT RADAR // INTERCEPT - See the Invisible</title>
+    <title>AIRCRAFT RADAR // iNTERCEPT</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <!-- Design tokens -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/core/variables.css') }}">
     <!-- Fonts - Conditional CDN/Local loading -->
     {% if offline_settings.fonts_source == 'local' %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts-local.css') }}">
@@ -27,8 +30,10 @@
 
     <header class="header">
         <div class="logo">
-            AIRCRAFT RADAR
-            <span>// INTERCEPT - See the Invisible</span>
+            <a href="/" style="color: inherit; text-decoration: none;">
+                AIRCRAFT RADAR
+                <span>// iNTERCEPT</span>
+            </a>
         </div>
         <div class="status-bar">
             <!-- Agent Selector -->
@@ -42,9 +47,13 @@
                 </label>
             </div>
             <a href="#" onclick="history.back(); return false;" class="back-link">Back</a>
-            <a href="/?mode=aircraft" class="back-link">Main Dashboard</a>
+            <a href="/" class="back-link">Main Dashboard</a>
         </div>
     </header>
+
+    <!-- Unified Navigation -->
+    {% set active_mode = 'adsb' %}
+    {% include 'partials/nav.html' %}
 
     <!-- Slim Statistics Bar -->
     <div class="stats-strip">

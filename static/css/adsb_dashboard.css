@@ -1,3 +1,9 @@
+/**
+ * ADSB Dashboard Styles
+ * Imports design tokens for consistency, with dashboard-specific overrides
+ */
+@import url('./core/variables.css');
+
 * {
     margin: 0;
     padding: 0;
@@ -5,23 +11,14 @@
 }
 
 :root {
-    --bg-dark: #0a0c10;
-    --bg-panel: #0f1218;
-    --bg-card: #151a23;
-    --border-color: #1f2937;
-    --border-glow: #4a9eff;
-    --text-primary: #e8eaed;
-    --text-secondary: #9ca3af;
-    --text-dim: #4b5563;
-    --accent-green: #22c55e;
-    --accent-cyan: #4a9eff;
-    --accent-orange: #f59e0b;
-    --accent-red: #ef4444;
-    --accent-yellow: #eab308;
-    --accent-amber: #d4a853;
+    /* Dashboard-specific aliases (for backward compatibility) */
+    --bg-dark: var(--bg-primary);
+    --bg-panel: var(--bg-secondary);
+    --bg-card: var(--bg-tertiary);
+    /* Use tokens for shared values, keep custom values for dashboard-specific */
     --grid-line: rgba(74, 158, 255, 0.08);
-    --radar-cyan: #4a9eff;
-    --radar-bg: #0f1218;
+    --radar-cyan: var(--accent-cyan);
+    --radar-bg: var(--bg-secondary);
 }
 
 body {
