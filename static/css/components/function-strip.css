@@ -221,13 +221,13 @@
 }
 
 .function-strip .status-dot.active,
-.function-strip .status-dot.listening,
 .function-strip .status-dot.scanning,
 .function-strip .status-dot.decoding {
     background: var(--accent-cyan);
     animation: strip-pulse 1.5s ease-in-out infinite;
 }
 
+.function-strip .status-dot.listening,
 .function-strip .status-dot.tracking,
 .function-strip .status-dot.receiving {
     background: var(--accent-green);

@@ -2247,6 +2247,15 @@ function updateDirectListenUI(isPlaying, freq) {
     if (quickFreq && freq) {
         quickFreq.textContent = freq.toFixed(3) + ' MHz';
     }
+
+    // Update function strip
+    updateListeningStripRunning(isPlaying, 'listen');
+
+    // Update strip frequency display
+    if (freq) {
+        const stripFreq = document.getElementById('listeningStripFreq');
+        if (stripFreq) stripFreq.textContent = freq.toFixed(3);
+    }
 }
 
 /**
@@ -2616,21 +2625,23 @@ window.exportScannerLog = exportScannerLog;
 /**
  * Update the listening post function strip running state
  */
-function updateListeningStripRunning(running) {
+function updateListeningStripRunning(running, mode = 'scan') {
     const listeningStripDot = document.getElementById('listeningStripDot');
     const listeningStripStatus = document.getElementById('listeningStripStatus');
-    const listeningStripStartBtn = document.getElementById('listeningStripStartBtn');
+    const listeningStripListenBtn = document.getElementById('listeningStripListenBtn');
+    const listeningStripScanBtn = document.getElementById('listeningStripScanBtn');
     const listeningStripStopBtn = document.getElementById('listeningStripStopBtn');
     const listeningStripFreqInput = document.getElementById('listeningStripFreqInput');
     const listeningStripMode = document.getElementById('listeningStripMode');
     const listeningStripGain = document.getElementById('listeningStripGain');
 
-    if (listeningStripDot) listeningStripDot.className = 'status-dot ' + (running ? 'scanning' : 'inactive');
+    if (listeningStripDot) listeningStripDot.className = 'status-dot ' + (running ? (mode === 'listen' ? 'listening' : 'scanning') : 'inactive');
     if (listeningStripStatus) {
-        listeningStripStatus.textContent = running ? 'SCANNING' : 'STANDBY';
-        listeningStripStatus.style.color = running ? 'var(--accent-cyan)' : '';
+        listeningStripStatus.textContent = running ? (mode === 'listen' ? 'LISTENING' : 'SCANNING') : 'STANDBY';
+        listeningStripStatus.style.color = running ? (mode === 'listen' ? 'var(--accent-green)' : 'var(--accent-cyan)') : '';
     }
-    if (listeningStripStartBtn) listeningStripStartBtn.style.display = running ? 'none' : 'inline-block';
+    if (listeningStripListenBtn) listeningStripListenBtn.style.display = running ? 'none' : 'inline-block';
+    if (listeningStripScanBtn) listeningStripScanBtn.style.display = running ? 'none' : 'inline-block';
     if (listeningStripStopBtn) listeningStripStopBtn.style.display = running ? 'inline-block' : 'none';
     if (listeningStripFreqInput) listeningStripFreqInput.disabled = running;
     if (listeningStripMode) listeningStripMode.disabled = running;
@@ -2677,15 +2688,48 @@ function startListeningFromStrip() {
 }
 
 /**
- * Stop listening from the function strip
+ * Listen directly from the function strip (audio only, no scanning)
+ */
+function listenFromStrip() {
+    // Get values from strip
+    const freq = document.getElementById('listeningStripFreqInput')?.value;
+    const mode = document.getElementById('listeningStripMode')?.value;
+    const gain = document.getElementById('listeningStripGain')?.value;
+
+    // Update the main controls if they exist
+    if (freq) {
+        const mainFreqInput = document.getElementById('radioScanStart');
+        if (mainFreqInput) mainFreqInput.value = freq;
+    }
+    if (mode) {
+        currentModulation = mode.toLowerCase();
+    }
+    if (gain) {
+        const gainValueEl = document.getElementById('radioGainValue');
+        if (gainValueEl) gainValueEl.textContent = gain;
+    }
+
+    // Start direct audio listening
+    toggleDirectListen();
+}
+
+/**
+ * Stop listening/scanning from the function strip
  */
 function stopListening() {
-    stopScanner();
+    // Stop both scanner and audio
+    if (isScannerRunning) {
+        stopScanner();
+    }
+    if (isDirectListening) {
+        stopDirectListen();
+    }
 }
 
 // Export strip functions
 window.updateListeningStripRunning = updateListeningStripRunning;
 window.updateListeningStrip = updateListeningStrip;
 window.startListeningFromStrip = startListeningFromStrip;
+window.listenFromStrip = listenFromStrip;
 window.stopListening = stopListening;
 
