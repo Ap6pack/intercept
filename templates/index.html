@@ -2428,6 +2428,11 @@
                 // Valid modes that can be switched to
                 const validModes = ['pager', 'sensor', 'rtlamr', 'satellite', 'sstv', 'wifi', 'bluetooth', 'listening', 'aprs', 'tscm', 'spystations', 'meshtastic'];
                 if (validModes.includes(modeParam)) {
+                    // Hide welcome overlay if present (skip the welcome screen)
+                    const welcomePage = document.getElementById('welcomePage');
+                    if (welcomePage) {
+                        welcomePage.style.display = 'none';
+                    }
                     switchMode(modeParam);
                 }
             }
