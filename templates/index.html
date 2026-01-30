@@ -2420,6 +2420,17 @@
 
             // Initialize dropdown nav active state
             updateDropdownActiveState();
+
+            // Handle mode parameter from URL (e.g., /?mode=aprs)
+            const urlParams = new URLSearchParams(window.location.search);
+            const modeParam = urlParams.get('mode');
+            if (modeParam && typeof switchMode === 'function') {
+                // Valid modes that can be switched to
+                const validModes = ['pager', 'sensor', 'rtlamr', 'satellite', 'sstv', 'wifi', 'bluetooth', 'listening', 'aprs', 'tscm', 'spystations', 'meshtastic'];
+                if (validModes.includes(modeParam)) {
+                    switchMode(modeParam);
+                }
+            }
         });
 
         // Toggle section collapse
