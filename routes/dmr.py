@@ -202,6 +202,28 @@ def parse_dsd_output(line: str) -> dict | None:
 
     ts = datetime.now().strftime('%H:%M:%S')
 
+    # Frame-level error / OK indicators (useful for quality metrics)
+    if re.search(r'\bDUID\s+ERR\b', line, re.IGNORECASE):
+        return {
+            'type': 'frame_error',
+            'kind': 'duid',
+            'detail': line[:200],
+            'timestamp': ts,
+        }
+    if re.search(r'\bR-?S\s+ERR\b', line, re.IGNORECASE):
+        return {
+            'type': 'frame_error',
+            'kind': 'rs',
+            'detail': line[:200],
+            'timestamp': ts,
+        }
+    if re.search(r'\bP25p2\b.*\b4V\b', line, re.IGNORECASE):
+        return {
+            'type': 'frame_ok',
+            'kind': 'p25p2',
+            'timestamp': ts,
+        }
+
     # If dsd-fme is emitting JSON (via -J), parse it first.
     if line.startswith('{') and line.endswith('}'):
         try:

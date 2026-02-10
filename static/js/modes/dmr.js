@@ -12,6 +12,9 @@ let dmrCallHistory = [];
 let dmrCurrentProtocol = '--';
 let dmrModeLabel = 'dmr';  // Protocol label for device reservation
 let dmrHasAudio = false;
+let dmrQualitySamples = [];
+let dmrQualityScore = null;
+let dmrSweepInProgress = false;
 
 // ============== BOOKMARKS ==============
 let dmrBookmarks = [];
@@ -89,7 +92,7 @@ function startDmr() {
         }));
     } catch (e) { /* localStorage unavailable */ }
 
-    fetch('/dmr/start', {
+    return fetch('/dmr/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ frequency, protocol, gain, device, ppm, fineTune, relaxCrc, demod })
@@ -98,6 +101,9 @@ function startDmr() {
     .then(data => {
         if (data.status === 'started') {
             isDmrRunning = true;
+            dmrQualitySamples = [];
+            dmrQualityScore = null;
+            updateDmrQualityUI();
             dmrCallCount = 0;
             dmrSyncCount = 0;
             dmrCallHistory = [];
@@ -146,11 +152,14 @@ function startDmr() {
 
 function stopDmr() {
     stopDmrAudio();
-    fetch('/dmr/stop', { method: 'POST' })
+    return fetch('/dmr/stop', { method: 'POST' })
     .then(r => r.json())
     .then(() => {
         isDmrRunning = false;
         if (dmrEventSource) { dmrEventSource.close(); dmrEventSource = null; }
+        dmrQualitySamples = [];
+        dmrQualityScore = null;
+        updateDmrQualityUI();
         updateDmrUI();
         dmrEventType = 'stopped';
         dmrActivityTarget = 0;
@@ -196,6 +205,7 @@ function handleDmrMessage(msg) {
         const syncCountEl = document.getElementById('dmrSyncCount');
         if (syncCountEl) syncCountEl.textContent = dmrSyncCount;
     } else if (msg.type === 'call') {
+        recordDmrQuality(true);
         dmrCallCount++;
         const countEl = document.getElementById('dmrCallCount');
         if (countEl) countEl.textContent = dmrCallCount;
@@ -238,8 +248,14 @@ function handleDmrMessage(msg) {
 
     } else if (msg.type === 'slot') {
         // Update slot info in current call
+    } else if (msg.type === 'frame_ok') {
+        recordDmrQuality(true);
+    } else if (msg.type === 'frame_error') {
+        recordDmrQuality(false);
     } else if (msg.type === 'raw') {
         // Raw DSD output — triggers synthesizer activity via dmrSynthPulse
+    } else if (msg.type === 'voice') {
+        recordDmrQuality(true);
     } else if (msg.type === 'heartbeat') {
         // Decoder is alive and listening — keep synthesizer in listening state
         if (isDmrRunning && dmrSynthInitialized) {
@@ -279,6 +295,111 @@ function handleDmrMessage(msg) {
             if (statusEl) statusEl.textContent = 'STOPPED';
             if (typeof releaseDevice === 'function') releaseDevice(dmrModeLabel);
         }
+    }
+}
+
+// ============== QUALITY METER ==============
+
+function recordDmrQuality(ok) {
+    dmrQualitySamples.push(!!ok);
+    if (dmrQualitySamples.length > 200) dmrQualitySamples.shift();
+    const total = dmrQualitySamples.length;
+    if (total < 5) {
+        dmrQualityScore = null;
+        updateDmrQualityUI();
+        return;
+    }
+    const errors = dmrQualitySamples.reduce((sum, v) => sum + (v ? 0 : 1), 0);
+    dmrQualityScore = Math.max(0, Math.min(100, Math.round(100 * (1 - (errors / total)))));
+    updateDmrQualityUI();
+}
+
+function updateDmrQualityUI() {
+    const textEl = document.getElementById('dmrQualityText');
+    const barEl = document.getElementById('dmrQualityBar');
+    if (!textEl || !barEl) return;
+    if (dmrQualityScore == null) {
+        textEl.textContent = '--';
+        barEl.style.width = '0%';
+        barEl.style.background = 'var(--text-muted)';
+        return;
+    }
+    textEl.textContent = `${dmrQualityScore}%`;
+    barEl.style.width = `${dmrQualityScore}%`;
+    if (dmrQualityScore >= 80) {
+        barEl.style.background = 'var(--accent-green)';
+    } else if (dmrQualityScore >= 50) {
+        barEl.style.background = 'var(--accent-amber, #f59e0b)';
+    } else {
+        barEl.style.background = 'var(--accent-red)';
+    }
+}
+
+// ============== FINE TUNE SWEEP ==============
+
+async function sweepDmrFineTune() {
+    if (!isDmrRunning) {
+        if (typeof showNotification === 'function') {
+            showNotification('Digital Voice', 'Start the decoder before sweeping fine tune.');
+        }
+        return;
+    }
+    if (dmrSweepInProgress) return;
+    dmrSweepInProgress = true;
+
+    const freqEl = document.getElementById('dmrFrequency');
+    const protoEl = document.getElementById('dmrProtocol');
+    const gainEl = document.getElementById('dmrGain');
+    const ppmEl = document.getElementById('dmrPPM');
+    const fineEl = document.getElementById('dmrFineTune');
+    const crcEl = document.getElementById('dmrRelaxCrc');
+    const demodEl = document.getElementById('dmrDemod');
+    const sweepBtn = document.getElementById('dmrFineTuneSweepBtn');
+
+    const original = {
+        frequency: freqEl?.value,
+        protocol: protoEl?.value,
+        gain: gainEl?.value,
+        ppm: ppmEl?.value,
+        fineTune: fineEl?.value,
+        relaxCrc: crcEl?.checked,
+        demod: demodEl?.value,
+    };
+
+    if (sweepBtn) {
+        sweepBtn.disabled = true;
+        sweepBtn.textContent = 'Sweeping...';
+    }
+
+    const offsets = [-2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000];
+    let best = { offset: parseInt(original.fineTune || 0, 10) || 0, score: -1 };
+
+    for (const offset of offsets) {
+        if (fineEl) fineEl.value = offset;
+        await stopDmr();
+        await new Promise(r => setTimeout(r, 300));
+        await startDmr();
+        dmrQualitySamples = [];
+        dmrQualityScore = null;
+        updateDmrQualityUI();
+        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 2500));
+        const score = dmrQualityScore == null ? 0 : dmrQualityScore;
+        if (score > best.score) best = { offset, score };
+    }
+
+    if (fineEl) fineEl.value = best.offset;
+    await stopDmr();
+    await new Promise(r => setTimeout(r, 300));
+    await startDmr();
+
+    if (sweepBtn) {
+        sweepBtn.disabled = false;
+        sweepBtn.textContent = 'Sweep Fine Tune';
+    }
+    dmrSweepInProgress = false;
+    if (typeof showNotification === 'function') {
+        showNotification('Digital Voice', `Sweep complete: best offset ${best.offset} Hz (${best.score}%)`);
     }
 }
 
@@ -776,3 +897,4 @@ window.addDmrBookmark = addDmrBookmark;
 window.addCurrentDmrFreqBookmark = addCurrentDmrFreqBookmark;
 window.removeDmrBookmark = removeDmrBookmark;
 window.dmrQuickTune = dmrQuickTune;
+window.sweepDmrFineTune = sweepDmrFineTune;

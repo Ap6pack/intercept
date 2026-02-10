@@ -237,3 +237,25 @@ def test_dmr_stream_mimetype(auth_client):
     """Stream should return event-stream content type."""
     resp = auth_client.get('/dmr/stream')
     assert resp.content_type.startswith('text/event-stream')
+def test_parse_frame_error_duid():
+    """Should parse DUID errors as frame_error."""
+    result = parse_dsd_output('P25p2 LCH 0  DUID ERR 11')
+    assert result is not None
+    assert result['type'] == 'frame_error'
+    assert result['kind'] == 'duid'
+
+
+def test_parse_frame_error_rs():
+    """Should parse Reed-Solomon errors as frame_error."""
+    result = parse_dsd_output('P25p2 SACCH  R-S ERR Sc')
+    assert result is not None
+    assert result['type'] == 'frame_error'
+    assert result['kind'] == 'rs'
+
+
+def test_parse_frame_ok_p25p2():
+    """Should parse P25p2 4V frames as OK."""
+    result = parse_dsd_output('P25p2 LCH 1  4V 1')
+    assert result is not None
+    assert result['type'] == 'frame_ok'
+    assert result['kind'] == 'p25p2'

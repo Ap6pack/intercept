@@ -59,6 +59,9 @@
                                 Adjust in 100 Hz steps; small offsets can dramatically improve P25 decode.
                             </span>
                         </div>
+                        <button class="preset-btn" id="dmrFineTuneSweepBtn" onclick="sweepDmrFineTune()" style="width: 100%; margin-top: 6px;">
+                            Sweep Fine Tune
+                        </button>
 
                         <div class="form-group" style="margin-top: 4px;">
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -108,21 +111,30 @@
                     </div>
 
                     <!-- Status -->
-                    <div class="section" style="margin-top: 12px;">
-                        <h3>Status</h3>
-                        <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Status</span>
-                                <span id="dmrStatus" style="font-size: 11px; color: var(--accent-cyan);">IDLE</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Protocol</span>
-                                <span id="dmrActiveProtocol" style="font-size: 11px; color: var(--text-primary);">--</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Calls</span>
-                                <span id="dmrCallCount" style="font-size: 14px; font-weight: bold; color: var(--accent-green);">0</span>
+                        <div class="section" style="margin-top: 12px;">
+                            <h3>Status</h3>
+                            <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Status</span>
+                                    <span id="dmrStatus" style="font-size: 11px; color: var(--accent-cyan);">IDLE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Protocol</span>
+                                    <span id="dmrActiveProtocol" style="font-size: 11px; color: var(--text-primary);">--</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Calls</span>
+                                    <span id="dmrCallCount" style="font-size: 14px; font-weight: bold; color: var(--accent-green);">0</span>
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Quality</span>
+                                        <span id="dmrQualityText" style="font-size: 11px; color: var(--text-primary);">--</span>
+                                    </div>
+                                    <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden;">
+                                        <div id="dmrQualityBar" style="height: 100%; width: 0%; background: var(--text-muted); transition: width 0.2s ease;"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
                 </div>
