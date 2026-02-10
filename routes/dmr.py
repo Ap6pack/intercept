@@ -484,6 +484,9 @@ def start_dmr() -> Response:
         # Allow rtl_fm to send directly to dsd
         dmr_rtl_process.stdout.close()
 
+        # Mark running before starting mux so it doesn't exit immediately.
+        dmr_running = True
+
         # Start mux thread: always drains dsd-fme stdout to prevent the
         # process from blocking (which would freeze stderr / text data).
         # ffmpeg is started lazily per-client in /dmr/audio/stream.
@@ -509,6 +512,7 @@ def start_dmr() -> Response:
                 dsd_err = dmr_dsd_process.stderr.read().decode('utf-8', errors='replace')[:500]
             logger.error(f"DSD pipeline died: rtl_fm rc={rtl_rc} err={rtl_err!r}, dsd rc={dsd_rc} err={dsd_err!r}")
             # Terminate surviving processes and unregister all
+            dmr_running = False
             dmr_has_audio = False
             for proc in [dmr_dsd_process, dmr_rtl_process]:
                 if proc and proc.poll() is None:
@@ -547,7 +551,6 @@ def start_dmr() -> Response:
 
         threading.Thread(target=_drain_rtl_stderr, args=(dmr_rtl_process,), daemon=True).start()
 
-        dmr_running = True
         dmr_thread = threading.Thread(
             target=stream_dsd_output,
             args=(dmr_rtl_process, dmr_dsd_process),
@@ -564,6 +567,8 @@ def start_dmr() -> Response:
 
     except Exception as e:
         logger.error(f"Failed to start DMR: {e}")
+        dmr_running = False
+        dmr_has_audio = False
         if dmr_active_device is not None:
             app_module.release_sdr_device(dmr_active_device)
             dmr_active_device = None
