@@ -135,6 +135,7 @@ def test_dsd_fme_protocol_flags_known_values():
     assert _DSD_FME_PROTOCOL_FLAGS['auto'] == ['-ft']       # XDMA
     assert _DSD_FME_PROTOCOL_FLAGS['dmr'] == ['-fs']        # Simplex (-fd is D-STAR!)
     assert _DSD_FME_PROTOCOL_FLAGS['p25'] == ['-f1']        # NOT -fp (ProVoice in fme)
+    assert _DSD_FME_PROTOCOL_FLAGS['p25p2'] == ['-f2']      # Phase 2
     assert _DSD_FME_PROTOCOL_FLAGS['nxdn'] == ['-fn']
     assert _DSD_FME_PROTOCOL_FLAGS['dstar'] == ['-fd']      # -fd is D-STAR in dsd-fme
     assert _DSD_FME_PROTOCOL_FLAGS['provoice'] == ['-fp']   # NOT -fv
@@ -154,6 +155,7 @@ def test_dsd_fme_modulation_hints():
     """C4FM modulation hints should be set for C4FM protocols."""
     assert _DSD_FME_MODULATION['dmr'] == ['-mc']
     assert _DSD_FME_MODULATION['p25'] == ['-mc']
+    assert _DSD_FME_MODULATION['p25p2'] == ['-mq']
     assert _DSD_FME_MODULATION['nxdn'] == ['-mc']
     # D-Star and ProVoice should not have forced modulation
     assert 'dstar' not in _DSD_FME_MODULATION

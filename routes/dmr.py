@@ -51,7 +51,7 @@ dmr_active_device: Optional[int] = None
 # freeze stderr / text data output).
 _active_ffmpeg_stdin: Optional[object] = None  # set by stream endpoint
 
-VALID_PROTOCOLS = ['auto', 'dmr', 'p25', 'nxdn', 'dstar', 'provoice']
+VALID_PROTOCOLS = ['auto', 'dmr', 'p25', 'p25p2', 'nxdn', 'dstar', 'provoice']
 
 # Classic dsd flags
 _DSD_PROTOCOL_FLAGS = {
@@ -72,6 +72,7 @@ _DSD_FME_PROTOCOL_FLAGS = {
     'auto': ['-ft'],       # XDMA: auto-detect DMR/P25/YSF
     'dmr': ['-fs'],        # DMR Simplex (-fd is D-STAR in dsd-fme!)
     'p25': ['-f1'],        # P25 Phase 1 (-fp is ProVoice in dsd-fme!)
+    'p25p2': ['-f2'],      # P25 Phase 2
     'nxdn': ['-fn'],       # NXDN96
     'dstar': ['-fd'],      # D-STAR (-fd in dsd-fme, NOT DMR!)
     'provoice': ['-fp'],   # ProVoice (-fp in dsd-fme, not -fv)
@@ -81,7 +82,8 @@ _DSD_FME_PROTOCOL_FLAGS = {
 # sync reliability vs letting dsd-fme auto-detect modulation type.
 _DSD_FME_MODULATION = {
     'dmr': ['-mc'],        # C4FM
-    'p25': ['-mc'],        # C4FM (Phase 1; Phase 2 would use -mq)
+    'p25': ['-mc'],        # C4FM (Phase 1)
+    'p25p2': ['-mq'],      # CQPSK (Phase 2)
     'nxdn': ['-mc'],       # C4FM
 }
 
@@ -492,6 +494,8 @@ def start_dmr() -> Response:
 
     if protocol not in VALID_PROTOCOLS:
         return jsonify({'status': 'error', 'message': f'Invalid protocol. Use: {", ".join(VALID_PROTOCOLS)}'}), 400
+    if protocol == 'p25p2' and not is_fme:
+        return jsonify({'status': 'error', 'message': 'P25 Phase 2 requires dsd-fme.'}), 400
 
     # Clear stale queue
     try:
