@@ -35,6 +35,9 @@ from config import (
     ADSB_DB_USER,
     ADSB_AUTO_START,
     ADSB_HISTORY_ENABLED,
+    ADSB_MLAT_ENABLED,
+    ADSB_MLAT_SBS_HOST,
+    ADSB_MLAT_SBS_PORT,
     SHARED_OBSERVER_LOCATION_ENABLED,
 )
 from utils.logging import adsb_logger as logger
@@ -71,7 +74,10 @@ adsb_last_message_time = None
 adsb_bytes_received = 0
 adsb_lines_received = 0
 adsb_active_device = None  # Track which device index is being used
+adsb_active_sdr_type = None
 _sbs_error_logged = False  # Suppress repeated connection error logs
+adsb_connected_sources: set[str] = set()
+_adsb_connection_lock = threading.Lock()
 
 # Track ICAOs already looked up in aircraft database (avoid repeated lookups)
 _looked_up_icaos: set[str] = set()
@@ -318,7 +324,29 @@ def check_dump1090_service():
     return None
 
 
-def parse_sbs_stream(service_addr):
+def _reset_adsb_state() -> None:
+    global adsb_connected, adsb_messages_received, adsb_last_message_time, adsb_bytes_received, adsb_lines_received, _sbs_error_logged
+    adsb_connected = False
+    adsb_messages_received = 0
+    adsb_last_message_time = None
+    adsb_bytes_received = 0
+    adsb_lines_received = 0
+    _sbs_error_logged = False
+    with _adsb_connection_lock:
+        adsb_connected_sources.clear()
+
+
+def _set_adsb_connected(source_key: str, connected: bool) -> None:
+    global adsb_connected
+    with _adsb_connection_lock:
+        if connected:
+            adsb_connected_sources.add(source_key)
+        else:
+            adsb_connected_sources.discard(source_key)
+        adsb_connected = bool(adsb_connected_sources)
+
+
+def parse_sbs_stream(service_addr: str, source_tag: str | None = None):
     """Parse SBS format data from dump1090 SBS port."""
     global adsb_using_service, adsb_connected, adsb_messages_received, adsb_last_message_time, adsb_bytes_received, adsb_lines_received, _sbs_error_logged
 
@@ -327,26 +355,23 @@ def parse_sbs_stream(service_addr):
 
     host, port = service_addr.split(':')
     port = int(port)
+    source_label = source_tag or 'adsb'
 
-    logger.info(f"SBS stream parser started, connecting to {host}:{port}")
-    adsb_connected = False
-    adsb_messages_received = 0
-    _sbs_error_logged = False
+    logger.info(f"SBS stream parser started ({source_label}), connecting to {host}:{port}")
 
     while adsb_using_service:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(SBS_SOCKET_TIMEOUT)
             sock.connect((host, port))
-            adsb_connected = True
+            _set_adsb_connected(service_addr, True)
             _sbs_error_logged = False  # Reset so we log next error
-            logger.info("Connected to SBS stream")
+            logger.info(f"Connected to SBS stream ({source_label})")
 
             buffer = ""
             last_update = time.time()
             pending_updates = set()
-            adsb_bytes_received = 0
-            adsb_lines_received = 0
+            local_lines_received = 0
 
             while adsb_using_service:
                 try:
@@ -364,13 +389,14 @@ def parse_sbs_stream(service_addr):
                             continue
 
                         adsb_lines_received += 1
+                        local_lines_received += 1
                         # Log first few lines for debugging
-                        if adsb_lines_received <= 3:
-                            logger.info(f"SBS line {adsb_lines_received}: {line[:100]}")
+                        if local_lines_received <= 3:
+                            logger.info(f"SBS line ({source_label}) {local_lines_received}: {line[:100]}")
 
                         parts = line.split(',')
                         if len(parts) < 11 or parts[0] != 'MSG':
-                            if adsb_lines_received <= 5:
+                            if local_lines_received <= 5:
                                 logger.debug(f"Skipping non-MSG line: {line[:50]}")
                             continue
 
@@ -421,6 +447,8 @@ def parse_sbs_stream(service_addr):
                                 try:
                                     aircraft['lat'] = float(parts[14])
                                     aircraft['lon'] = float(parts[15])
+                                    if source_label:
+                                        aircraft['position_source'] = source_label
                                 except (ValueError, TypeError):
                                     pass
 
@@ -494,16 +522,24 @@ def parse_sbs_stream(service_addr):
                     continue
 
             sock.close()
-            adsb_connected = False
+            _set_adsb_connected(service_addr, False)
         except OSError as e:
-            adsb_connected = False
+            _set_adsb_connected(service_addr, False)
             if not _sbs_error_logged:
                 logger.warning(f"SBS connection error: {e}, reconnecting...")
                 _sbs_error_logged = True
             time.sleep(SBS_RECONNECT_DELAY)
 
-    adsb_connected = False
+    _set_adsb_connected(service_addr, False)
     logger.info("SBS stream parser stopped")
+
+
+def _start_mlat_stream(host: str, port: int) -> str:
+    mlat_addr = f"{host}:{port}"
+    logger.info(f"Connecting to MLAT SBS at {mlat_addr}")
+    thread = threading.Thread(target=parse_sbs_stream, args=(mlat_addr, 'mlat'), daemon=True)
+    thread.start()
+    return mlat_addr
 
 
 @adsb_bp.route('/tools')
@@ -580,7 +616,7 @@ def adsb_session():
 @adsb_bp.route('/start', methods=['POST'])
 def start_adsb():
     """Start ADS-B tracking."""
-    global adsb_using_service, adsb_active_device
+    global adsb_using_service, adsb_active_device, adsb_active_sdr_type
 
     with app_module.adsb_lock:
         if adsb_using_service:
@@ -601,10 +637,22 @@ def start_adsb():
         device = validate_device_index(data.get('device', '0'))
     except ValueError as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
+    _reset_adsb_state()
 
     # Check for remote SBS connection (e.g., remote dump1090)
     remote_sbs_host = data.get('remote_sbs_host')
     remote_sbs_port = data.get('remote_sbs_port', 30003)
+    mlat_sbs_host = (data.get('mlat_sbs_host') or '').strip()
+    mlat_sbs_port = data.get('mlat_sbs_port', ADSB_MLAT_SBS_PORT)
+    if not mlat_sbs_host and ADSB_MLAT_ENABLED and ADSB_MLAT_SBS_HOST:
+        mlat_sbs_host = ADSB_MLAT_SBS_HOST
+        mlat_sbs_port = ADSB_MLAT_SBS_PORT
+    if mlat_sbs_host:
+        try:
+            mlat_sbs_host = validate_rtl_tcp_host(mlat_sbs_host)
+            mlat_sbs_port = validate_rtl_tcp_port(mlat_sbs_port)
+        except ValueError as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 400
 
     if remote_sbs_host:
         # Validate and connect to remote dump1090 SBS output
@@ -617,8 +665,10 @@ def start_adsb():
         remote_addr = f"{remote_sbs_host}:{remote_sbs_port}"
         logger.info(f"Connecting to remote dump1090 SBS at {remote_addr}")
         adsb_using_service = True
-        thread = threading.Thread(target=parse_sbs_stream, args=(remote_addr,), daemon=True)
+        thread = threading.Thread(target=parse_sbs_stream, args=(remote_addr, 'adsb'), daemon=True)
         thread.start()
+        if mlat_sbs_host:
+            _start_mlat_stream(mlat_sbs_host, mlat_sbs_port)
         session = _record_session_start(
             device_index=device,
             sdr_type='remote',
@@ -638,8 +688,10 @@ def start_adsb():
     if existing_service:
         logger.info(f"Found existing dump1090 service at {existing_service}")
         adsb_using_service = True
-        thread = threading.Thread(target=parse_sbs_stream, args=(existing_service,), daemon=True)
+        thread = threading.Thread(target=parse_sbs_stream, args=(existing_service, 'adsb'), daemon=True)
         thread.start()
+        if mlat_sbs_host:
+            _start_mlat_stream(mlat_sbs_host, mlat_sbs_port)
         session = _record_session_start(
             device_index=device,
             sdr_type='external',
@@ -689,7 +741,7 @@ def start_adsb():
 
     # Check if device is available before starting local dump1090
     device_int = int(device)
-    error = app_module.claim_sdr_device(device_int, 'adsb')
+    error = app_module.claim_sdr_device(device_int, 'adsb', sdr_type.value)
     if error:
         return jsonify({
             'status': 'error',
@@ -726,7 +778,7 @@ def start_adsb():
 
         if app_module.adsb_process.poll() is not None:
             # Process exited - release device and get error message
-            app_module.release_sdr_device(device_int)
+            app_module.release_sdr_device(device_int, sdr_type.value)
             stderr_output = ''
             if app_module.adsb_process.stderr:
                 try:
@@ -772,9 +824,12 @@ def start_adsb():
             })
 
         adsb_using_service = True
-        adsb_active_device = device  # Track which device is being used
-        thread = threading.Thread(target=parse_sbs_stream, args=(f'localhost:{ADSB_SBS_PORT}',), daemon=True)
+        adsb_active_device = device  # Track which device index is being used
+        adsb_active_sdr_type = sdr_type.value
+        thread = threading.Thread(target=parse_sbs_stream, args=(f'localhost:{ADSB_SBS_PORT}', 'adsb'), daemon=True)
         thread.start()
+        if mlat_sbs_host:
+            _start_mlat_stream(mlat_sbs_host, mlat_sbs_port)
 
         session = _record_session_start(
             device_index=device,
@@ -792,14 +847,14 @@ def start_adsb():
         })
     except Exception as e:
         # Release device on failure
-        app_module.release_sdr_device(device_int)
+        app_module.release_sdr_device(device_int, sdr_type.value)
         return jsonify({'status': 'error', 'message': str(e)})
 
 
 @adsb_bp.route('/stop', methods=['POST'])
 def stop_adsb():
     """Stop ADS-B tracking."""
-    global adsb_using_service, adsb_active_device
+    global adsb_using_service, adsb_active_device, adsb_active_sdr_type
     data = request.json or {}
     stop_source = data.get('source')
     stopped_by = request.remote_addr
@@ -823,10 +878,12 @@ def stop_adsb():
 
         # Release device from registry
         if adsb_active_device is not None:
-            app_module.release_sdr_device(adsb_active_device)
+            app_module.release_sdr_device(adsb_active_device, adsb_active_sdr_type or 'rtlsdr')
 
         adsb_using_service = False
         adsb_active_device = None
+        adsb_active_sdr_type = None
+        _reset_adsb_state()
 
     app_module.adsb_aircraft.clear()
     _looked_up_icaos.clear()
@@ -868,6 +925,7 @@ def adsb_dashboard():
         'adsb_dashboard.html',
         shared_observer_location=SHARED_OBSERVER_LOCATION_ENABLED,
         adsb_auto_start=ADSB_AUTO_START,
+        adsb_mlat_enabled=ADSB_MLAT_ENABLED,
     )
 
 

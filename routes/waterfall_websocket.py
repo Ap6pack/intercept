@@ -87,6 +87,7 @@ def init_waterfall_websocket(app: Flask):
         reader_thread = None
         stop_event = threading.Event()
         claimed_device = None
+        claimed_sdr_type = None
         # Queue for outgoing messages — only the main loop touches ws.send()
         send_queue = queue.Queue(maxsize=120)
 
@@ -141,8 +142,9 @@ def init_waterfall_websocket(app: Flask):
                         unregister_process(iq_process)
                         iq_process = None
                     if claimed_device is not None:
-                        app_module.release_sdr_device(claimed_device)
+                        app_module.release_sdr_device(claimed_device, claimed_sdr_type or 'rtlsdr')
                         claimed_device = None
+                        claimed_sdr_type = None
                     stop_event.clear()
                     # Flush stale frames from previous capture
                     while not send_queue.empty():
@@ -185,7 +187,7 @@ def init_waterfall_websocket(app: Flask):
                     end_freq = center_freq + effective_span_mhz / 2
 
                     # Claim the device
-                    claim_err = app_module.claim_sdr_device(device_index, 'waterfall')
+                    claim_err = app_module.claim_sdr_device(device_index, 'waterfall', sdr_type.value)
                     if claim_err:
                         ws.send(json.dumps({
                             'status': 'error',
@@ -194,6 +196,7 @@ def init_waterfall_websocket(app: Flask):
                         }))
                         continue
                     claimed_device = device_index
+                    claimed_sdr_type = sdr_type.value
 
                     # Build I/Q capture command
                     try:
@@ -208,8 +211,9 @@ def init_waterfall_websocket(app: Flask):
                             bias_t=bias_t,
                         )
                     except NotImplementedError as e:
-                        app_module.release_sdr_device(device_index)
+                        app_module.release_sdr_device(device_index, sdr_type.value)
                         claimed_device = None
+                        claimed_sdr_type = None
                         ws.send(json.dumps({
                             'status': 'error',
                             'message': str(e),
@@ -255,8 +259,9 @@ def init_waterfall_websocket(app: Flask):
                             safe_terminate(iq_process)
                             unregister_process(iq_process)
                             iq_process = None
-                        app_module.release_sdr_device(device_index)
+                        app_module.release_sdr_device(device_index, sdr_type.value)
                         claimed_device = None
+                        claimed_sdr_type = None
                         ws.send(json.dumps({
                             'status': 'error',
                             'message': f'Failed to start I/Q capture: {e}',
@@ -350,8 +355,9 @@ def init_waterfall_websocket(app: Flask):
                         unregister_process(iq_process)
                         iq_process = None
                     if claimed_device is not None:
-                        app_module.release_sdr_device(claimed_device)
+                        app_module.release_sdr_device(claimed_device, claimed_sdr_type or 'rtlsdr')
                         claimed_device = None
+                        claimed_sdr_type = None
                     stop_event.clear()
                     ws.send(json.dumps({'status': 'stopped'}))
 
@@ -366,7 +372,8 @@ def init_waterfall_websocket(app: Flask):
                 safe_terminate(iq_process)
                 unregister_process(iq_process)
             if claimed_device is not None:
-                app_module.release_sdr_device(claimed_device)
+                app_module.release_sdr_device(claimed_device, claimed_sdr_type or 'rtlsdr')
+                claimed_sdr_type = None
             # Complete WebSocket close handshake, then shut down the
             # raw socket so Werkzeug cannot write its HTTP 200 response
             # on top of the WebSocket stream (which browsers see as

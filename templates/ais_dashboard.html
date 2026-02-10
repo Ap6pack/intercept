@@ -449,7 +449,10 @@
                         devices.forEach((d, i) => {
                             const opt = document.createElement('option');
                             opt.value = d.index;
-                            opt.textContent = `SDR ${d.index}: ${d.name}`;
+                            const sdrType = (d.sdr_type || d.type || 'rtlsdr').toLowerCase();
+                            const sdrLabel = sdrType.toUpperCase();
+                            opt.dataset.sdrType = sdrType;
+                            opt.textContent = `SDR ${d.index} (${sdrLabel}): ${d.name}`;
                             aisSelect.appendChild(opt);
                         });
                     }
@@ -457,18 +460,23 @@
                     // Populate DSC device selector
                     const dscSelect = document.getElementById('dscDeviceSelect');
                     dscSelect.innerHTML = '';
-                    if (devices.length === 0) {
-                        dscSelect.innerHTML = '<option value="0">No devices</option>';
+                    const dscDevices = devices.filter(d => {
+                        const sdrType = (d.sdr_type || d.type || 'rtlsdr').toLowerCase();
+                        return sdrType === 'rtlsdr';
+                    });
+                    if (dscDevices.length === 0) {
+                        dscSelect.innerHTML = '<option value="0">No RTL-SDR found</option>';
                     } else {
-                        devices.forEach((d, i) => {
+                        dscDevices.forEach((d, i) => {
                             const opt = document.createElement('option');
                             opt.value = d.index;
-                            opt.textContent = `SDR ${d.index}: ${d.name}`;
+                            opt.dataset.sdrType = 'rtlsdr';
+                            opt.textContent = `SDR ${d.index} (RTLSDR): ${d.name}`;
                             dscSelect.appendChild(opt);
                         });
                         // Default to second device if available
-                        if (devices.length > 1) {
-                            dscSelect.value = devices[1].index;
+                        if (dscDevices.length > 1) {
+                            dscSelect.value = dscDevices[1].index;
                         }
                     }
                 })
@@ -546,7 +554,9 @@
         }
 
         function startTracking() {
-            const device = document.getElementById('aisDeviceSelect').value;
+            const aisSelect = document.getElementById('aisDeviceSelect');
+            const device = aisSelect.value;
+            const sdrType = (aisSelect.selectedOptions[0]?.dataset?.sdrType || 'rtlsdr').toLowerCase();
             const gain = document.getElementById('aisGain').value;
 
             // Check if using agent mode
@@ -561,7 +571,7 @@
                 fetch(`/controller/agents/${aisCurrentAgent}/ais/start`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled() })
+                    body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled(), sdr_type: sdrType })
                 })
                 .then(r => r.json())
                 .then(result => {
@@ -586,7 +596,7 @@
             fetch('/ais/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled() })
+                body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled(), sdr_type: sdrType })
             })
             .then(r => r.json())
             .then(data => {
@@ -1170,7 +1180,9 @@
         }
 
         function startDscTracking() {
-            const device = document.getElementById('dscDeviceSelect').value;
+            const dscSelect = document.getElementById('dscDeviceSelect');
+            const device = dscSelect.value;
+            const sdrType = (dscSelect.selectedOptions[0]?.dataset?.sdrType || 'rtlsdr').toLowerCase();
             const gain = document.getElementById('dscGain').value;
 
             // Check if using agent mode
@@ -1185,7 +1197,7 @@
             fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device, gain })
+                body: JSON.stringify({ device, gain, sdr_type: sdrType })
             })
             .then(r => r.json())
             .then(data => {
@@ -1617,21 +1629,32 @@
             const aisSelect = document.getElementById('aisDeviceSelect');
             const dscSelect = document.getElementById('dscDeviceSelect');
 
-            [aisSelect, dscSelect].forEach(select => {
+            const aisDevices = devices || [];
+            const dscDevices = aisDevices.filter(device => {
+                const sdrType = (device.sdr_type || device.type || 'rtlsdr').toLowerCase();
+                return sdrType === 'rtlsdr';
+            });
+
+            const fillSelect = (select, list, emptyLabel) => {
                 if (!select) return;
                 select.innerHTML = '';
-
-                if (devices.length === 0) {
-                    select.innerHTML = '<option value="0">No SDR found</option>';
-                } else {
-                    devices.forEach(device => {
-                        const opt = document.createElement('option');
-                        opt.value = device.index;
-                        opt.textContent = `Device ${device.index}: ${device.name || device.type || 'SDR'}`;
-                        select.appendChild(opt);
-                    });
+                if (list.length === 0) {
+                    select.innerHTML = `<option value=\"0\">${emptyLabel}</option>`;
+                    return;
                 }
-            });
+                list.forEach(device => {
+                    const opt = document.createElement('option');
+                    const sdrType = (device.sdr_type || device.type || 'rtlsdr').toLowerCase();
+                    const sdrLabel = sdrType.toUpperCase();
+                    opt.value = device.index;
+                    opt.dataset.sdrType = sdrType;
+                    opt.textContent = `Device ${device.index} (${sdrLabel}): ${device.name || device.type || 'SDR'}`;
+                    select.appendChild(opt);
+                });
+            };
+
+            fillSelect(aisSelect, aisDevices, 'No SDR found');
+            fillSelect(dscSelect, dscDevices, 'No RTL-SDR found');
         }
 
         // Override startTracking for agent support
@@ -1645,13 +1668,15 @@
                     return;
                 }
 
-                const device = document.getElementById('aisDeviceSelect').value;
+                const aisSelect = document.getElementById('aisDeviceSelect');
+                const device = aisSelect.value;
+                const sdrType = (aisSelect.selectedOptions[0]?.dataset?.sdrType || 'rtlsdr').toLowerCase();
                 const gain = document.getElementById('aisGain').value;
 
                 fetch(`/controller/agents/${aisCurrentAgent}/ais/start`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled() })
+                    body: JSON.stringify({ device, gain, bias_t: getBiasTEnabled(), sdr_type: sdrType })
                 })
                 .then(r => r.json())
                 .then(data => {

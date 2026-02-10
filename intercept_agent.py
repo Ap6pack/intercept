@@ -679,6 +679,7 @@ class ModeManager:
             running_modes_detail[mode] = {
                 'started_at': info.get('started_at'),
                 'device': params.get('device', params.get('device_index', 0)),
+                'sdr_type': str(params.get('sdr_type', 'rtlsdr')).lower(),
             }
 
         status = {
@@ -698,20 +699,22 @@ class ModeManager:
     # Modes that use RTL-SDR devices
     SDR_MODES = {'adsb', 'sensor', 'pager', 'ais', 'acars', 'dsc', 'rtlamr', 'listening_post'}
 
-    def get_sdr_in_use(self, device: int = 0) -> str | None:
+    def get_sdr_in_use(self, device: int = 0, sdr_type: str = 'rtlsdr') -> str | None:
         """Check if an SDR device is in use by another mode.
 
         Returns the mode name using the device, or None if available.
         """
+        sdr_type_key = str(sdr_type or 'rtlsdr').lower()
         for mode, info in self.running_modes.items():
             if mode in self.SDR_MODES:
                 mode_device = info.get('params', {}).get('device', 0)
+                mode_sdr_type = str(info.get('params', {}).get('sdr_type', 'rtlsdr')).lower()
                 # Normalize to int for comparison
                 try:
                     mode_device = int(mode_device)
                 except (ValueError, TypeError):
                     mode_device = 0
-                if mode_device == device:
+                if mode_device == device and mode_sdr_type == sdr_type_key:
                     return mode
         return None
 
@@ -731,7 +734,8 @@ class ModeManager:
                 device = int(device)
             except (ValueError, TypeError):
                 device = 0
-            in_use_by = self.get_sdr_in_use(device)
+            sdr_type = str(params.get('sdr_type', 'rtlsdr')).lower()
+            in_use_by = self.get_sdr_in_use(device, sdr_type)
             if in_use_by:
                 return {
                     'status': 'error',
@@ -1100,6 +1104,11 @@ class ModeManager:
         # Mode-specific cleanup
         if mode == 'adsb':
             self.adsb_aircraft.clear()
+            if 'adsb_mlat' in self.output_threads:
+                thread = self.output_threads['adsb_mlat']
+                if thread and thread.is_alive():
+                    thread.join(timeout=1)
+                del self.output_threads['adsb_mlat']
         elif mode == 'wifi':
             self.wifi_networks.clear()
             self.wifi_clients.clear()
@@ -1315,10 +1324,16 @@ class ModeManager:
         sdr_type_str = params.get('sdr_type', 'rtlsdr')
         remote_sbs_host = params.get('remote_sbs_host')
         remote_sbs_port = params.get('remote_sbs_port', 30003)
+        mlat_sbs_host = params.get('mlat_sbs_host')
+        mlat_sbs_port = params.get('mlat_sbs_port', 30105)
 
         # If remote SBS host provided, just connect to it
         if remote_sbs_host:
-            return self._start_adsb_sbs_connection(remote_sbs_host, remote_sbs_port)
+            result = self._start_adsb_sbs_connection(remote_sbs_host, remote_sbs_port, source_tag='adsb', thread_name='adsb')
+            if mlat_sbs_host:
+                self._start_adsb_sbs_connection(mlat_sbs_host, mlat_sbs_port, source_tag='mlat', thread_name='adsb_mlat')
+                result['mlat_source'] = f'{mlat_sbs_host}:{mlat_sbs_port}'
+            return result
 
         # Check if dump1090 already running on port 30003
         try:
@@ -1328,7 +1343,11 @@ class ModeManager:
             sock.close()
             if result == 0:
                 logger.info("dump1090 already running, connecting to SBS port")
-                return self._start_adsb_sbs_connection('localhost', 30003)
+                result = self._start_adsb_sbs_connection('localhost', 30003, source_tag='adsb', thread_name='adsb')
+                if mlat_sbs_host:
+                    self._start_adsb_sbs_connection(mlat_sbs_host, mlat_sbs_port, source_tag='mlat', thread_name='adsb_mlat')
+                    result['mlat_source'] = f'{mlat_sbs_host}:{mlat_sbs_port}'
+                return result
         except Exception:
             pass
 
@@ -1385,7 +1404,11 @@ class ModeManager:
                 return {'status': 'error', 'message': f'dump1090 failed to start: {stderr[:200]}'}
 
             # Connect to SBS port
-            return self._start_adsb_sbs_connection('localhost', 30003)
+            result = self._start_adsb_sbs_connection('localhost', 30003, source_tag='adsb', thread_name='adsb')
+            if mlat_sbs_host:
+                self._start_adsb_sbs_connection(mlat_sbs_host, mlat_sbs_port, source_tag='mlat', thread_name='adsb_mlat')
+                result['mlat_source'] = f'{mlat_sbs_host}:{mlat_sbs_port}'
+            return result
 
         except FileNotFoundError:
             return {'status': 'error', 'message': 'dump1090 not found'}
@@ -1414,15 +1437,15 @@ class ModeManager:
                 return path
         return None
 
-    def _start_adsb_sbs_connection(self, host: str, port: int) -> dict:
+    def _start_adsb_sbs_connection(self, host: str, port: int, *, source_tag: str = 'adsb', thread_name: str = 'adsb') -> dict:
         """Connect to SBS port and start parsing."""
         thread = threading.Thread(
             target=self._adsb_sbs_reader,
-            args=(host, port),
+            args=(host, port, source_tag),
             daemon=True
         )
         thread.start()
-        self.output_threads['adsb'] = thread
+        self.output_threads[thread_name] = thread
 
         return {
             'status': 'started',
@@ -1431,7 +1454,7 @@ class ModeManager:
             'gps_enabled': gps_manager.is_running
         }
 
-    def _adsb_sbs_reader(self, host: str, port: int):
+    def _adsb_sbs_reader(self, host: str, port: int, source_tag: str = 'adsb'):
         """Read and parse SBS data from dump1090."""
         mode = 'adsb'
         stop_event = self.stop_events.get(mode)
@@ -1443,7 +1466,7 @@ class ModeManager:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(5.0)
                 sock.connect((host, port))
-                logger.info(f"Connected to SBS at {host}:{port}")
+                logger.info(f"Connected to SBS at {host}:{port} ({source_tag})")
                 retry_count = 0
 
                 buffer = ""
@@ -1458,7 +1481,7 @@ class ModeManager:
 
                         while '\n' in buffer:
                             line, buffer = buffer.split('\n', 1)
-                            self._parse_sbs_line(line.strip())
+                            self._parse_sbs_line(line.strip(), source_tag)
 
                     except socket.timeout:
                         continue
@@ -1475,7 +1498,7 @@ class ModeManager:
 
         logger.info("ADS-B SBS reader stopped")
 
-    def _parse_sbs_line(self, line: str):
+    def _parse_sbs_line(self, line: str, source_tag: str = 'adsb'):
         """Parse SBS format line and update aircraft dict."""
         if not line:
             return
@@ -1509,6 +1532,8 @@ class ModeManager:
                 if parts[14] and parts[15]:
                     aircraft['lat'] = float(parts[14])
                     aircraft['lon'] = float(parts[15])
+                    if source_tag:
+                        aircraft['position_source'] = source_tag
 
             elif msg_type == '4' and len(parts) > 16:
                 if parts[12]:
