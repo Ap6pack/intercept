@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import queue
 import re
 import select
@@ -114,6 +115,78 @@ def find_ffmpeg() -> str | None:
     return shutil.which('ffmpeg')
 
 
+def _coerce_int(value) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_dsd_json(payload: dict, ts: str) -> dict | None:
+    """Parse JSON output lines from dsd-fme into events."""
+    event_type = str(payload.get('type') or payload.get('event') or payload.get('msg') or payload.get('kind') or '').lower()
+    nested = payload.get('data') if isinstance(payload.get('data'), dict) else {}
+
+    def first_of(keys):
+        for obj in (payload, nested):
+            for key in keys:
+                if key in obj and obj[key] is not None:
+                    return obj[key]
+        return None
+
+    talkgroup = _coerce_int(first_of([
+        'tg', 'tgt', 'talkgroup', 'talk_group', 'tgid',
+        'group', 'group_id', 'groupId', 'dst', 'dest',
+        'destination', 'target'
+    ]))
+    source = _coerce_int(first_of([
+        'src', 'source', 'src_id', 'source_id', 'sourceId',
+        'uid', 'unit', 'radio', 'rid', 'radio_id', 'radioId'
+    ]))
+    slot = _coerce_int(first_of(['slot', 'timeslot', 'time_slot', 'ts']))
+    nac = first_of(['nac'])
+    protocol = first_of(['protocol', 'mode', 'system', 'sys', 'network'])
+
+    if talkgroup is not None and source is not None:
+        event = {
+            'type': 'call',
+            'talkgroup': talkgroup,
+            'source_id': source,
+            'timestamp': ts,
+        }
+        if slot is not None:
+            event['slot'] = slot
+        if protocol:
+            event['protocol'] = str(protocol)
+        return event
+
+    if nac is not None:
+        return {'type': 'nac', 'nac': str(nac), 'timestamp': ts}
+
+    if 'sync' in event_type:
+        return {
+            'type': 'sync',
+            'protocol': str(protocol or event_type),
+            'timestamp': ts,
+        }
+
+    voice_flag = first_of(['voice', 'voice_frame', 'voiceFrame'])
+    if 'voice' in event_type or voice_flag is True:
+        event = {
+            'type': 'voice',
+            'detail': str(first_of(['detail', 'text']) or event_type or 'voice'),
+            'timestamp': ts,
+        }
+        if slot is not None:
+            event['slot'] = slot
+        return event
+
+    if protocol:
+        return {'type': 'sync', 'protocol': str(protocol), 'timestamp': ts}
+
+    return None
+
+
 def parse_dsd_output(line: str) -> dict | None:
     """Parse a line of DSD stderr output into a structured event.
 
@@ -124,6 +197,24 @@ def parse_dsd_output(line: str) -> dict | None:
     if not line:
         return None
 
+    ts = datetime.now().strftime('%H:%M:%S')
+
+    # If dsd-fme is emitting JSON (via -J), parse it first.
+    if line.startswith('{') and line.endswith('}'):
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
+            parsed = _parse_dsd_json(payload, ts)
+            if parsed:
+                return parsed
+            return {
+                'type': 'raw',
+                'text': line[:200],
+                'timestamp': ts,
+            }
+
     # Skip DSD/dsd-fme startup banner lines (ASCII art, version info, etc.)
     # Only filter lines that are purely decorative — dsd-fme uses box-drawing
     # characters (│, ─) as column separators in DATA lines, so we must not
@@ -133,8 +224,6 @@ def parse_dsd_output(line: str) -> dict | None:
         return None
     if re.match(r'^\s*(Build Version|MBElib|CODEC2|Audio (Out|In)|Decoding )', line):
         return None
-
-    ts = datetime.now().strftime('%H:%M:%S')
 
     # Sync detection: "Sync: +DMR (data)" or "Sync: +P25 Phase 1"
     sync_match = re.match(r'Sync:\s*\+?(\S+.*)', line)
