@@ -52,6 +52,7 @@ dmr_active_device: Optional[int] = None
 _active_ffmpeg_stdin: Optional[object] = None  # set by stream endpoint
 
 VALID_PROTOCOLS = ['auto', 'dmr', 'p25', 'p25p2', 'nxdn', 'dstar', 'provoice']
+VALID_DEMODS = ['nfm', 'fm']
 
 # Classic dsd flags
 _DSD_PROTOCOL_FLAGS = {
@@ -489,11 +490,14 @@ def start_dmr() -> Response:
         device = validate_device_index(data.get('device', 0))
         protocol = str(data.get('protocol', 'auto')).lower()
         ppm = validate_ppm(data.get('ppm', 0))
+        demod = str(data.get('demod', 'nfm')).lower()
     except (ValueError, TypeError) as e:
         return jsonify({'status': 'error', 'message': f'Invalid parameter: {e}'}), 400
 
     if protocol not in VALID_PROTOCOLS:
         return jsonify({'status': 'error', 'message': f'Invalid protocol. Use: {", ".join(VALID_PROTOCOLS)}'}), 400
+    if demod not in VALID_DEMODS:
+        return jsonify({'status': 'error', 'message': f'Invalid demod. Use: {", ".join(VALID_DEMODS)}'}), 400
     if protocol == 'p25p2' and not is_fme:
         return jsonify({'status': 'error', 'message': 'P25 Phase 2 requires dsd-fme.'}), 400
 
@@ -521,7 +525,7 @@ def start_dmr() -> Response:
     # internally via its own frame-sync detection.
     rtl_cmd = [
         rtl_fm_path,
-        '-M', 'fm',
+        '-M', demod,
         '-f', str(freq_hz),
         '-s', '48000',
         '-g', str(gain),

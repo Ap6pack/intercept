@@ -70,6 +70,7 @@ function startDmr() {
     const gain = parseInt(document.getElementById('dmrGain')?.value || 40);
     const ppm = parseInt(document.getElementById('dmrPPM')?.value || 0);
     const relaxCrc = document.getElementById('dmrRelaxCrc')?.checked || false;
+    const demod = document.getElementById('dmrDemod')?.value || 'nfm';
     const device = typeof getSelectedDevice === 'function' ? getSelectedDevice() : 0;
 
     // Use protocol name for device reservation so panel shows "D-STAR", "P25", etc.
@@ -83,14 +84,14 @@ function startDmr() {
     // Save settings to localStorage for persistence
     try {
         localStorage.setItem(DMR_SETTINGS_KEY, JSON.stringify({
-            frequency, protocol, gain, ppm, relaxCrc
+            frequency, protocol, gain, ppm, relaxCrc, demod
         }));
     } catch (e) { /* localStorage unavailable */ }
 
     fetch('/dmr/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frequency, protocol, gain, device, ppm, relaxCrc })
+        body: JSON.stringify({ frequency, protocol, gain, device, ppm, relaxCrc, demod })
     })
     .then(r => r.json())
     .then(data => {
@@ -617,11 +618,13 @@ function restoreDmrSettings() {
         const gainEl = document.getElementById('dmrGain');
         const ppmEl = document.getElementById('dmrPPM');
         const crcEl = document.getElementById('dmrRelaxCrc');
+        const demodEl = document.getElementById('dmrDemod');
         if (freqEl && s.frequency != null) freqEl.value = s.frequency;
         if (protoEl && s.protocol) protoEl.value = s.protocol;
         if (gainEl && s.gain != null) gainEl.value = s.gain;
         if (ppmEl && s.ppm != null) ppmEl.value = s.ppm;
         if (crcEl && s.relaxCrc != null) crcEl.checked = s.relaxCrc;
+        if (demodEl && s.demod) demodEl.value = s.demod;
     } catch (e) { /* localStorage unavailable */ }
 }
 
