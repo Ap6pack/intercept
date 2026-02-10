@@ -490,6 +490,7 @@ def start_dmr() -> Response:
         device = validate_device_index(data.get('device', 0))
         protocol = str(data.get('protocol', 'auto')).lower()
         ppm = validate_ppm(data.get('ppm', 0))
+        fine_tune = int(data.get('fineTune', 0) or 0)
         demod = str(data.get('demod', 'nfm')).lower()
     except (ValueError, TypeError) as e:
         return jsonify({'status': 'error', 'message': f'Invalid parameter: {e}'}), 400
@@ -500,6 +501,8 @@ def start_dmr() -> Response:
         return jsonify({'status': 'error', 'message': f'Invalid demod. Use: {", ".join(VALID_DEMODS)}'}), 400
     if protocol == 'p25p2' and not is_fme:
         return jsonify({'status': 'error', 'message': 'P25 Phase 2 requires dsd-fme.'}), 400
+    if abs(fine_tune) > 20000:
+        return jsonify({'status': 'error', 'message': 'Fine tune offset too large (max +/- 20000 Hz).'}), 400
 
     # Clear stale queue
     try:
@@ -517,7 +520,7 @@ def start_dmr() -> Response:
 
     dmr_active_device = device
 
-    freq_hz = int(frequency * 1e6)
+    freq_hz = int((frequency * 1e6) + fine_tune)
 
     # Build rtl_fm command (48kHz sample rate for DSD).
     # Squelch disabled (-l 0): rtl_fm's squelch chops the bitstream
